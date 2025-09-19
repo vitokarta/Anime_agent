@@ -24,6 +24,10 @@ from mcp.client.stdio import stdio_client
 from mcp.client.session import ClientSession
 from mcp import StdioServerParameters
 from openai import OpenAI
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import LEMONADE_BASE_URL, LEMONADE_API_KEY, DEFAULT_MODEL
 
 FETCH_URL = "https://acgsecrets.hk/bangumi/202507/"   # 換成你想測的網址
 MAX_LEN   = 2000                    # 一次取回的最大字元數
@@ -66,12 +70,12 @@ def summarize_with_lemonade(markdown_text: str) -> str:
     若只想確認抓取成功，你也可以只 print markdown，不用這段。
     """
     client = OpenAI(
-        base_url="http://localhost:8000/api/v1",
-        api_key="lemonade",
+        base_url=LEMONADE_BASE_URL,
+        api_key=LEMONADE_API_KEY,
     )
 
     completion = client.chat.completions.create(
-        model="Qwen-2.5-7B-Instruct-NPU",
+        model=DEFAULT_MODEL,
         messages=[
             {"role": "system", "content": "You are a helpful assistant that summarizes web content."},
             {

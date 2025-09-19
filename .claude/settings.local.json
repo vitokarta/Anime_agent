@@ -5,7 +5,8 @@
       "WebFetch(domain:docs.claude.com)",
       "Bash(claude help)",
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
