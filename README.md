@@ -28,6 +28,8 @@ $env:PATH += ";$HOME\.local\bin"; uv --version
 uv venv .venv
 # 啟用
 \.\.venv\Scripts\Activate.ps1
+#不能就換
+.venv\Scripts\activate
 ```
 
 ### 3. 安裝專案相依套件
