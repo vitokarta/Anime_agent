@@ -3,25 +3,36 @@ from pathlib import Path
 
 DB_PATH = Path("anime_database.db")
 
-SCHEMA_SQL = """
+SCHEMA_SQL_TABLES = """
 CREATE TABLE IF NOT EXISTS anime (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
-    season TEXT,                       -- 季節 (例: 2024-Winter)
-    episodes INTEGER,                  -- 集數
-    rating REAL,                       -- 評分 (例: 8.72)
-    viewers_count INTEGER,             -- 觀看 / 會員數
-    genres_json TEXT,                  -- 類型 JSON 陣列 ["Action","Comedy"]
-    platforms_json TEXT,               -- 平台 JSON 陣列 ["Netflix","Crunchyroll"]
-    image_path TEXT,                   -- 圖片路徑或 URL
-    is_disliked INTEGER DEFAULT 0,     -- 0=正常 1=不喜歡 (排除推薦)
+    season TEXT,
+    episodes INTEGER,
+    rating REAL,
+    viewers_count INTEGER,
+    genres_json TEXT,
+    platforms_json TEXT,
+    image_path TEXT,
+    is_disliked INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_favorites (
+    user_id TEXT NOT NULL,
+    anime_id INTEGER NOT NULL,
+    favorited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, anime_id),
+    FOREIGN KEY (anime_id) REFERENCES anime(id)
+);
+"""
+
+INDEX_SQL = """
 CREATE INDEX IF NOT EXISTS idx_anime_rating ON anime(rating DESC);
 CREATE INDEX IF NOT EXISTS idx_anime_season ON anime(season);
 CREATE INDEX IF NOT EXISTS idx_anime_viewers ON anime(viewers_count);
 CREATE INDEX IF NOT EXISTS idx_anime_is_disliked ON anime(is_disliked);
+CREATE INDEX IF NOT EXISTS idx_user_fav_user_time ON user_favorites(user_id, favorited_at DESC);
 """
 
 def create_schema(db_path: Path = DB_PATH) -> None:
@@ -31,7 +42,8 @@ def create_schema(db_path: Path = DB_PATH) -> None:
     # 可選 PRAGMA：提升寫入效能 / 讀取並發 (WAL)
         cur.execute("PRAGMA journal_mode=WAL;")
         cur.execute("PRAGMA synchronous=NORMAL;")
-        for statement in filter(None, (s.strip() for s in SCHEMA_SQL.split(";"))):
+        # 先建立資料表 (不含索引)
+        for statement in filter(None, (s.strip() for s in SCHEMA_SQL_TABLES.split(";"))):
             if statement:
                 cur.execute(statement)
 
@@ -47,6 +59,11 @@ def create_schema(db_path: Path = DB_PATH) -> None:
 
         if alter_actions:
             print(f"🔄 已新增欄位: {', '.join(a.split()[3] for a in alter_actions)}")
+
+        # 再建立索引（確保欄位都存在）
+        for statement in filter(None, (s.strip() for s in INDEX_SQL.split(";"))):
+            if statement:
+                cur.execute(statement)
         conn.commit()
         print("✅ 資料表已建立/確認 (anime)")
         print(f"📂 資料庫檔案: {db_path}")

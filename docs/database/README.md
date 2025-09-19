@@ -77,3 +77,53 @@ sqlite3 anime_database.db
 SELECT * FROM anime LIMIT 5;   -- 查詢前五筆
 .quit             -- 離開 CLI
 ```
+
+## 資料表：user_favorites（使用者收藏）
+一位使用者可收藏多部動畫；同一動畫不可重複收藏（複合主鍵）。
+
+| 欄位 | 型態 | 說明 |
+|------|------|------|
+| user_id | TEXT | 使用者識別（可為帳號 / UUID） |
+| anime_id | INTEGER | 對應 anime.id |
+| favorited_at | TIMESTAMP | 收藏時間 |
+
+索引 / 主鍵：`PRIMARY KEY (user_id, anime_id)`，並有 `idx_user_fav_user_time` (user_id, favorited_at DESC)。
+
+### 新增收藏（忽略已存在）
+```sql
+INSERT OR IGNORE INTO user_favorites (user_id, anime_id)
+VALUES ('u01', 5);
+```
+
+### 取消收藏
+```sql
+DELETE FROM user_favorites
+WHERE user_id = 'u01' AND anime_id = 5;
+```
+
+### 查詢使用者收藏列表
+```sql
+SELECT a.id, a.title, a.rating, f.favorited_at
+FROM user_favorites f
+JOIN anime a ON a.id = f.anime_id
+WHERE f.user_id = 'u01'
+ORDER BY f.favorited_at DESC
+LIMIT 50;
+```
+
+### 檢查是否已收藏
+```sql
+SELECT 1 FROM user_favorites
+WHERE user_id = 'u01' AND anime_id = 5
+LIMIT 1;
+```
+
+### 統計最常被收藏的前 10 動畫
+```sql
+SELECT a.id, a.title, COUNT(*) AS fav_count
+FROM user_favorites f
+JOIN anime a ON a.id = f.anime_id
+GROUP BY a.id
+ORDER BY fav_count DESC
+LIMIT 10;
+```
