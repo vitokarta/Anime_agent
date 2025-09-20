@@ -26,6 +26,75 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.route('/api/anime/like/<int:anime_id>', methods=['POST'])
+def update_like_status(anime_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 從請求中獲取狀態（like 或 dislike）
+        action = request.json.get('action')
+        
+        # 先獲取當前狀態
+        cursor.execute('SELECT liked, is_disliked FROM anime WHERE id = ?', (anime_id,))
+        current_status = cursor.fetchone()
+        
+        if action == 'like':
+            # 如果已經是喜歡狀態，則取消喜歡
+            if current_status['liked']:
+                cursor.execute('UPDATE anime SET liked = 0 WHERE id = ?', (anime_id,))
+                print(f"Anime {anime_id} unmarked as liked")
+            else:
+                # 設置為喜歡，同時取消不喜歡
+                cursor.execute('UPDATE anime SET liked = 1, is_disliked = 0 WHERE id = ?', (anime_id,))
+                print(f"Anime {anime_id} marked as liked")
+        elif action == 'dislike':
+            # 如果已經是不喜歡狀態，則取消不喜歡
+            if current_status['is_disliked']:
+                cursor.execute('UPDATE anime SET is_disliked = 0 WHERE id = ?', (anime_id,))
+                print(f"Anime {anime_id} unmarked as disliked")
+            else:
+                # 設置為不喜歡，同時取消喜歡
+                cursor.execute('UPDATE anime SET is_disliked = 1, liked = 0 WHERE id = ?', (anime_id,))
+                print(f"Anime {anime_id} marked as disliked")
+            
+        conn.commit()
+        return jsonify({"success": True, "message": f"Updated {action} status for anime {anime_id}"}), 200
+        
+    except Exception as e:
+        print(f"Error updating like status: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/anime/favorites', methods=['GET'])
+def get_favorite_anime():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 獲取所有被標記為喜歡的動漫
+        cursor.execute('SELECT * FROM anime WHERE liked = 1')
+        favorites = cursor.fetchall()
+        
+        # 轉換為列表格式
+        result = []
+        for anime in favorites:
+            anime_dict = dict(anime)
+            # 確保 JSON 字段被正確解析
+            for field in ['genres_json', 'platforms_json']:
+                if anime_dict[field]:
+                    anime_dict[field] = json.loads(anime_dict[field])
+            result.append(anime_dict)
+            
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"Error fetching favorites: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 @app.route('/api/anime/<int:count>', methods=['GET'])
 def get_anime_list(count):
     try:
@@ -82,7 +151,9 @@ def get_anime_list(count):
                 'description': anime_dict.get('synopsis', '暫無描述'),
                 'platforms': platforms,
                 'reason': '基於你的偏好推薦',  # 之後可以基於用戶偏好生成
-                'created_at': anime_dict.get('created_at')
+                'created_at': anime_dict.get('created_at'),
+                'liked': bool(anime_dict.get('liked', 0)),
+                'is_disliked': bool(anime_dict.get('is_disliked', 0))
             })
             
         # 診斷日誌
@@ -262,7 +333,9 @@ def get_anime_recommendations():
                 'description': anime_dict.get('synopsis', '暫無描述'),
                 'platforms': platforms,
                 'reason': reason,
-                'created_at': anime_dict.get('created_at')
+                'created_at': anime_dict.get('created_at'),
+                'liked': bool(anime_dict.get('liked', 0)),
+                'is_disliked': bool(anime_dict.get('is_disliked', 0))
             })
         
         conn.close()
