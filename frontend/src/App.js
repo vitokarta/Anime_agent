@@ -1,75 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Heart, X, Star, Users, Play, ChevronDown } from 'lucide-react';
 import './App.css';
 
-// 模擬動漫資料
-const mockAnimeData = [
-  {
-    id: 1,
-    title: '鬼滅之刃',
-    cover: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=400&fit=crop',
-    episodes: 44,
-    rating: 8.7,
-    viewers: 2500000,
-    genres: ['動作', '超自然', '歷史'],
-    description: '在大正時期的日本，少年炭治郎為了拯救變成鬼的妹妹，踏上了成為鬼殺隊成員的道路。憑藉著堅強的意志和水之呼吸劍術，他將面對各種強大的鬼怪，展開一場關於親情、友情與正義的史詩冒險。',
-    platforms: ['Netflix', 'Crunchyroll'],
-    reason: '基於你喜歡的動作和超自然元素，這部作品有精彩的戰鬥場面和深刻的情感故事。'
-  },
-  {
-    id: 2,
-    title: '進擊的巨人',
-    cover: 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=300&h=400&fit=crop',
-    episodes: 87,
-    rating: 9.0,
-    viewers: 3200000,
-    genres: ['動作', '劇情', '黑暗'],
-    description: '人類居住在高牆內，對抗著神秘的巨人威脅。艾倫、三笠和阿爾敏踏上了探索真相的旅程，但他們發現的真相比想像中更加殘酷和複雜。',
-    platforms: ['Netflix', 'Funimation'],
-    reason: '這部作品擁有複雜的世界觀和令人震撼的劇情轉折，適合喜歡深度故事的觀眾。'
-  },
-  {
-    id: 3,
-    title: '你的名字',
-    cover: 'https://images.unsplash.com/photo-1551269901-5c5e14c25df7?w=300&h=400&fit=crop',
-    episodes: 1,
-    rating: 8.4,
-    viewers: 1800000,
-    genres: ['浪漫', '超自然', '劇情'],
-    description: '兩個陌生的高中生透過神秘的身體交換現象相遇，展開了一段跨越時空的愛情故事。當他們試圖尋找彼此時，卻發現命運早已將他們的人生緊緊相繫。',
-    platforms: ['Netflix', 'Prime Video'],
-    reason: '如果你喜歡浪漫和超自然元素的結合，這部電影會帶給你深刻的感動。'
-  },
-  {
-    id: 4,
-    title: '咒術迴戰',
-    cover: 'https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=300&h=400&fit=crop',
-    episodes: 24,
-    rating: 8.6,
-    viewers: 2100000,
-    genres: ['動作', '超自然', '學校'],
-    description: '虎杖悠仁無意中吞下了詛咒之王宿儺的手指，從此踏入了咒術師的世界。在東京咒術高等專門學校，他將學習如何控制體內的力量。',
-    platforms: ['Crunchyroll', 'Netflix'],
-    reason: '現代設定的超自然戰鬥動漫，擁有獨特的咒術系統和精彩的角色設計。'
-  },
-  {
-    id: 5,
-    title: '間諜過家家',
-    cover: 'https://images.unsplash.com/photo-1583623025817-d180a2221d0a?w=300&h=400&fit=crop',
-    episodes: 25,
-    rating: 8.8,
-    viewers: 2800000,
-    genres: ['喜劇', '動作', '家庭'],
-    description: '頂級間諜「黃昏」為了執行任務必須組建一個假家庭，他收養了能讀心的女孩安妮亞，並與殺手約兒假結婚。',
-    platforms: ['Crunchyroll', 'Netflix'],
-    reason: '輕鬆幽默的家庭喜劇，平衡了動作和溫馨的日常。安妮亞的可愛表情讓人忍俊不禁。'
-  }
-];
-
 const seasons = [
-  '2025-1月', '2025-4月', '2025-7月', '2025-10月',
+  '2025-10月', '2025-7月', '2025-4月', '2025-1月',
   '2024-10月', '2024-7月', '2024-4月', '2024-1月'
 ];
+
+// 奶茶色系主題
+const milkTeaTheme = {
+  // 主背景：淺奶茶漸層
+  background: 'linear-gradient(135deg, #F3E5D4 0%, #E6D5C3 50%, #D4C4B0 100%)',
+  // 主要按鈕：深奶茶色
+  accent: '#967259',
+  // 按鈕懸停：更深的奶茶色
+  accentHover: '#7D5F4C',
+  // 輔助色系
+  colors: {
+    // 輸入框背景：淺米色
+    inputBg: '#FFF9F0',
+    // 輸入框邊框：淺奶茶色
+    inputBorder: '#D4C4B0',
+    // 標籤背景：淺褐色
+    tagBg: '#E6D5C3',
+    // 標籤文字：深褐色
+    tagText: '#6B4423',
+    // 卡片背景：純白帶透明度
+    cardBg: 'rgba(255, 255, 255, 0.9)',
+    // 強調文字：深咖啡色
+    emphasizedText: '#5C3C24'
+  }
+};
+
+
 
 function App() {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'recommendations', 'myArea'
@@ -77,19 +40,54 @@ function App() {
   const [dislikes, setDislikes] = useState([]);
   const [currentRecommendations, setCurrentRecommendations] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  
+
   // 表單狀態
-  const [selectedSeason, setSelectedSeason] = useState('2025-1月');
+  const [selectedSeason, setSelectedSeason] = useState('2025-10月');
   const [recommendCount, setRecommendCount] = useState(5);
   const [description, setDescription] = useState('');
   const [useFavorites, setUseFavorites] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // 創建 ref 來存儲 textarea 的引用
+  const descriptionRef = useRef(null);
+  const recommendCountRef = useRef(null);
+
+  // 在生成推薦時使用 ref 的值
+  const handleGenerateRecommendationsWithRef = () => {
+    let newRecommendCount = 5; // 默認值
+
+    // 更新 description 狀態為當前輸入框的值
+    if (descriptionRef.current) {
+      setDescription(descriptionRef.current.value);
+    }
+
+    // 更新 recommendCount 狀態為當前輸入框的值
+    if (recommendCountRef.current) {
+      const value = parseInt(recommendCountRef.current.value);
+      if (!isNaN(value) && value >= 1 && value <= 10) {
+        newRecommendCount = value;
+      }
+    }
+
+    // 更新 recommendCount 狀態
+    setRecommendCount(newRecommendCount);
+
+    // 確保更新輸入框的顯示值
+    if (recommendCountRef.current) {
+      recommendCountRef.current.value = String(newRecommendCount);
+    }
+
+    // 調用生成函數
+    handleGenerateRecommendations(newRecommendCount);
+  };
+
+
 
   // 載入本地存儲的收藏
   useEffect(() => {
     const savedFavorites = localStorage.getItem('anime-favorites');
     const savedDislikes = localStorage.getItem('anime-dislikes');
-    
+
     if (savedFavorites) {
       setFavorites(JSON.parse(savedFavorites));
     }
@@ -108,16 +106,43 @@ function App() {
   }, [dislikes]);
 
   // 處理推薦生成
-  const handleGenerateRecommendations = () => {
+  const handleGenerateRecommendations = async (count) => {
     setIsGenerating(true);
-    // 模擬API調用延遲
-    setTimeout(() => {
-      const filteredAnime = mockAnimeData.filter(anime => !dislikes.includes(anime.id));
-      setCurrentRecommendations(filteredAnime.slice(0, recommendCount));
+    try {
+      console.log('開始從API獲取數據...');
+      const response = await fetch(`http://localhost:5000/api/anime/${count || recommendCount}`);
+      console.log('API響應狀態:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('從API獲取的原始數據:', data);
+      
+      if (!Array.isArray(data)) {
+        throw new Error('API返回的數據格式不正確');
+      }
+      
+      if (data.length === 0) {
+        throw new Error('API返回的數據為空');
+      }
+      
+      // 過濾掉不喜歡的動漫
+      const filteredAnime = data.filter(anime => !dislikes.includes(anime.id));
+      console.log('過濾後的動漫數據:', filteredAnime);
+      
+      setCurrentRecommendations(filteredAnime);
       setCurrentCardIndex(0);
       setCurrentView('recommendations');
+    } catch (error) {
+      console.error('獲取動漫數據時出錯:', error);
+      alert(`API請求失敗: ${error.message}`);
+      setCurrentRecommendations([]);
+      setCurrentCardIndex(0);
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   // 處理喜歡/不喜歡
@@ -141,21 +166,22 @@ function App() {
     setFavorites(favorites.filter(fav => fav.id !== animeId));
   };
 
+
   // 主頁面組件
   const HomePage = () => (
-    <div className="home-page">
+    <div className="home-page" style={{ background: milkTeaTheme.background }}>
       <div className="container">
         <h1 className="main-title">
           🎌 動漫推薦 Agent
         </h1>
-        
+
         <div className="form-container">
           <div className="form-content">
             {/* 季度選擇 */}
             <div className="form-group">
               <label className="form-label">選擇季度</label>
               <div className="select-container">
-                <select 
+                <select
                   value={selectedSeason}
                   onChange={(e) => setSelectedSeason(e.target.value)}
                   className="form-select"
@@ -173,14 +199,14 @@ function App() {
             {/* 推薦數量 */}
             <div className="form-group">
               <label className="form-label">推薦數量 (1-10部)</label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={recommendCount}
-                onChange={(e) => setRecommendCount(Number(e.target.value))}
-                className="form-input"
-                placeholder="輸入想要的推薦數量"
+              <textarea
+                ref={recommendCountRef}
+                defaultValue={recommendCount}
+                className="form-textarea"
+                placeholder="輸入想要的推薦數量 (1-10)"
+                autoComplete="off"
+                rows={2}
+                style={{ resize: 'none' }}
               />
             </div>
 
@@ -188,10 +214,13 @@ function App() {
             <div className="form-group">
               <label className="form-label">動漫偏好描述</label>
               <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                ref={descriptionRef}
+                defaultValue={description}
                 className="form-textarea"
                 placeholder="描述你想看的動漫類型、劇情偏好等..."
+                autoComplete="off"
+                rows={4}
+                style={{ resize: 'none' }}
               />
             </div>
 
@@ -211,7 +240,7 @@ function App() {
 
             {/* 生成按鈕 */}
             <button
-              onClick={handleGenerateRecommendations}
+              onClick={handleGenerateRecommendationsWithRef}
               disabled={isGenerating}
               className="generate-btn"
             >
@@ -250,6 +279,17 @@ function App() {
     // 鍵盤事件監聽
     useEffect(() => {
       const handleKeyPress = (e) => {
+        // 如果焦點在輸入元素上，不處理鍵盤事件
+        const activeElement = document.activeElement;
+        if (activeElement && (
+          activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT' ||
+          activeElement.isContentEditable
+        )) {
+          return;
+        }
+
         if (e.key === 'ArrowLeft') {
           e.preventDefault();
           goToPrevious();
@@ -262,7 +302,7 @@ function App() {
       };
 
       window.addEventListener('keydown', handleKeyPress);
-      
+
       return () => {
         window.removeEventListener('keydown', handleKeyPress);
       };
@@ -270,7 +310,7 @@ function App() {
 
     if (currentRecommendations.length === 0) {
       return (
-        <div className="empty-state">
+        <div className="empty-state" style={{ background: milkTeaTheme.background }}>
           <div className="empty-content">
             <h2>推薦完成！</h2>
             <button
@@ -322,7 +362,7 @@ function App() {
     };
 
     return (
-      <div className="recommendations-page">
+      <div className="recommendations-page" style={{ background: milkTeaTheme.background }}>
         <div className="recommendations-container">
           {/* 標題與導航 */}
           <div className="rec-header">
@@ -343,7 +383,7 @@ function App() {
             </div>
 
             <div className="progress-bar">
-              <div 
+              <div
                 className="progress-fill"
                 style={{ width: `${((currentCardIndex + 1) / currentRecommendations.length) * 100}%` }}
               ></div>
@@ -352,18 +392,13 @@ function App() {
 
           {/* 卡片容器 */}
           <div className="cards-container">
-            {/* 操作提示 */}
-            {currentCardIndex === 0 && (
-              <div className="hint-overlay">
-                ← → 鍵盤切換 | 滑動瀏覽
-              </div>
-            )}
+
 
             {/* 推薦卡片 */}
-            <div 
+            <div
               className="cards-wrapper"
-              style={{ 
-                transform: `translateX(calc(-${currentCardIndex * 100}% + ${isDragging ? dragOffset : 0}px))` 
+              style={{
+                transform: `translateX(calc(-${currentCardIndex * 100}% + ${isDragging ? dragOffset : 0}px))`
               }}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
@@ -372,10 +407,10 @@ function App() {
               {currentRecommendations.map((anime) => (
                 <div key={anime.id} className="anime-card">
                   <div className="card-inner">
-                    {/* 封面圖 */}
+                    {/* 左側封面圖 */}
                     <div className="card-cover">
-                      <img 
-                        src={anime.cover} 
+                      <img
+                        src={anime.cover}
                         alt={anime.title}
                         className="cover-image"
                       />
@@ -385,12 +420,12 @@ function App() {
                       </div>
                     </div>
 
-                    {/* 卡片內容 */}
+                    {/* 右側卡片內容 */}
                     <div className="card-content">
                       <h3 className="anime-title">{anime.title}</h3>
-                      
+
                       <div className="anime-stats">
-                        <span>📺 {anime.episodes} 集</span>
+                        <span className="season-tag">🗓️ {anime.season}</span>
                         <span className="viewers">
                           <Users className="users-icon" />
                           <span>{(anime.viewers / 1000000).toFixed(1)}M</span>
@@ -432,18 +467,16 @@ function App() {
                       <div className="action-buttons">
                         <button
                           onClick={() => handleDislike(anime.id)}
-                          className={`action-btn dislike-btn ${
-                            dislikes.includes(anime.id) ? 'active' : ''
-                          }`}
+                          className={`action-btn dislike-btn ${dislikes.includes(anime.id) ? 'active' : ''
+                            }`}
                         >
                           <X className="btn-icon" />
                           <span>{dislikes.includes(anime.id) ? '已標記' : '不喜歡'}</span>
                         </button>
                         <button
                           onClick={() => handleLike(anime)}
-                          className={`action-btn like-btn ${
-                            favorites.find(fav => fav.id === anime.id) ? 'active' : ''
-                          }`}
+                          className={`action-btn like-btn ${favorites.find(fav => fav.id === anime.id) ? 'active' : ''
+                            }`}
                         >
                           <Heart className={`btn-icon ${favorites.find(fav => fav.id === anime.id) ? 'filled' : ''}`} />
                           <span>{favorites.find(fav => fav.id === anime.id) ? '已收藏' : '喜歡'}</span>
@@ -455,25 +488,7 @@ function App() {
               ))}
             </div>
 
-            {/* 左右箭頭按鈕 */}
-            {currentCardIndex > 0 && (
-              <button
-                onClick={goToPrevious}
-                className="arrow-btn left-arrow"
-                title="上一部 (←)"
-              >
-                ←
-              </button>
-            )}
-            {currentCardIndex < currentRecommendations.length - 1 && (
-              <button
-                onClick={goToNext}
-                className="arrow-btn right-arrow"
-                title="下一部 (→)"
-              >
-                →
-              </button>
-            )}
+
           </div>
 
           {/* 底部操作提示 */}
@@ -488,7 +503,7 @@ function App() {
 
   // 我的專區組件
   const MyAreaView = () => (
-    <div className="my-area-page">
+    <div className="my-area-page" style={{ background: milkTeaTheme.background }}>
       <div className="my-area-container">
         <div className="my-area-header">
           <h1 className="my-area-title">我的專區</h1>
@@ -511,8 +526,8 @@ function App() {
             {favorites.map(anime => (
               <div key={anime.id} className="favorite-card">
                 <div className="favorite-cover">
-                  <img 
-                    src={anime.cover} 
+                  <img
+                    src={anime.cover}
                     alt={anime.title}
                     className="favorite-image"
                   />
@@ -527,11 +542,11 @@ function App() {
                     <span>{anime.rating}</span>
                   </div>
                 </div>
-                
+
                 <div className="favorite-info">
                   <h3 className="favorite-title">{anime.title}</h3>
                   <div className="favorite-stats">
-                    📺 {anime.episodes} 集 • 👥 {(anime.viewers / 1000000).toFixed(1)}M
+                    🗓️ {anime.season} • 👥 {(anime.viewers / 1000000).toFixed(1)}M
                   </div>
                   <div className="favorite-genres">
                     {anime.genres.slice(0, 3).map(genre => (
@@ -553,7 +568,7 @@ function App() {
   );
 
   // 主渲染
-  switch(currentView) {
+  switch (currentView) {
     case 'recommendations':
       return <RecommendationsView />;
     case 'myArea':
