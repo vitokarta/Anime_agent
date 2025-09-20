@@ -2,10 +2,32 @@ import { useState, useEffect, useRef } from 'react';
 import { Heart, X, Star, Users, Play, ChevronDown } from 'lucide-react';
 import './App.css';
 
-const seasons = [
-  '2025-10月', '2025-7月', '2025-4月', '2025-1月',
-  '2024-10月', '2024-7月', '2024-4月', '2024-1月'
+// 定義前端顯示用的季節列表（用月份顯示）
+const displaySeasons = [
+  { value: 'random', label: '🎲 隨機推薦' },  // 預設為隨機推薦
+  { value: '2025-Fall', label: '2025-10月' },
+  { value: '2025-Summer', label: '2025-7月' },
+  { value: '2025-Spring', label: '2025-4月' },
+  { value: '2025-Winter', label: '2025-1月' },
+  { value: '2024-Fall', label: '2024-10月' },
+  { value: '2024-Summer', label: '2024-7月' },
+  { value: '2024-Spring', label: '2024-4月' },
+  { value: '2024-Winter', label: '2024-1月' }
 ];
+
+// 簡化的季節處理函數
+const toBackendFormat = (displaySeason) => {
+  console.log('toBackendFormat input:', displaySeason);
+  
+  // 處理隨機推薦的情況
+  if (displaySeason === 'random') {
+    console.log('Random recommendation selected');
+    return '';  // 返回空字符串表示不指定季度
+  }
+  
+  // 直接返回，因為value已經是正確的格式
+  return displaySeason;
+};
 
 // 奶茶色系主題
 const milkTeaTheme = {
@@ -42,23 +64,35 @@ function App() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
   // 表單狀態
-  const [selectedSeason, setSelectedSeason] = useState('2025-10月');
+  const [selectedSeason, setSelectedSeason] = useState('random');  // 初始為隨機推薦
+  const [internalSeason, setInternalSeason] = useState('');  // 初始為空，表示不指定季度
   const [recommendCount, setRecommendCount] = useState(5);
   const [description, setDescription] = useState('');
   const [useFavorites, setUseFavorites] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // 當選擇的季節改變時，更新內部季節格式
+  useEffect(() => {
+    console.log('Selected season changed:', selectedSeason);
+    const converted = toBackendFormat(selectedSeason);
+    console.log('Converted to backend format:', converted);
+    setInternalSeason(converted);
+  }, [selectedSeason]);
   
   // 創建 ref 來存儲 textarea 的引用
   const descriptionRef = useRef(null);
   const recommendCountRef = useRef(null);
 
   // 在生成推薦時使用 ref 的值
-  const handleGenerateRecommendationsWithRef = () => {
+  const handleGenerateRecommendationsWithRef = async () => {  // 添加 async
     let newRecommendCount = 5; // 默認值
+    let currentDescription = ''; // 保存當前描述
 
-    // 更新 description 狀態為當前輸入框的值
+    // 獲取描述文字
     if (descriptionRef.current) {
-      setDescription(descriptionRef.current.value);
+      currentDescription = descriptionRef.current.value;
+      // 同步更新狀態（雖然這次不依賴它）
+      setDescription(currentDescription);
     }
 
     // 更新 recommendCount 狀態為當前輸入框的值
@@ -77,8 +111,8 @@ function App() {
       recommendCountRef.current.value = String(newRecommendCount);
     }
 
-    // 調用生成函數
-    handleGenerateRecommendations(newRecommendCount);
+    // 直接調用生成函數，並傳遞當前描述
+    await handleGenerateRecommendations(newRecommendCount, currentDescription);
   };
 
 
@@ -106,11 +140,30 @@ function App() {
   }, [dislikes]);
 
   // 處理推薦生成
-  const handleGenerateRecommendations = async (count) => {
+  const handleGenerateRecommendations = async (count, currentDescription = '') => {
     setIsGenerating(true);
     try {
-      console.log('開始從API獲取數據...');
-      const response = await fetch(`http://localhost:5000/api/anime/${count || recommendCount}`);
+      console.log('開始從API獲取數據...', '當前選擇的季度:', selectedSeason);
+      console.log('Preparing request with season:', selectedSeason);
+      console.log('Internal season format:', internalSeason);
+      console.log('當前描述文字:', currentDescription);
+
+      const requestData = {
+        count: count || recommendCount,
+        season: internalSeason,  // 使用內部存儲的後端格式
+        description: currentDescription.trim(),  // 使用傳入的描述文字而不是狀態
+        useFavorites: useFavorites,
+        favorites: useFavorites ? favorites : [] // 只有在勾選使用專區時才傳送收藏資料
+      };
+      console.log('發送請求數據:', requestData);
+      
+      const response = await fetch(`http://localhost:5000/api/anime/recommend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
       console.log('API響應狀態:', response.status);
       
       if (!response.ok) {
@@ -183,12 +236,15 @@ function App() {
               <div className="select-container">
                 <select
                   value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(e.target.value)}
+                  onChange={(e) => {
+                    console.log('Dropdown selection changed to:', e.target.value);
+                    setSelectedSeason(e.target.value);
+                  }}
                   className="form-select"
                 >
-                  {seasons.map(season => (
-                    <option key={season} value={season}>
-                      {season}
+                  {displaySeasons.map(season => (
+                    <option key={season.value} value={season.value}>
+                      {season.label}
                     </option>
                   ))}
                 </select>
