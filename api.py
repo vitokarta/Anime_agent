@@ -116,7 +116,7 @@ def get_anime_recommendations():
         use_favorites = data.get('useFavorites', False)
         favorites = data.get('favorites', [])
 
-        classification_result = classify_input_request(description)
+        classification_result = classify_input_request(description, season=season)
 
         if classification_result[0] == 1 or classification_result[0] == 2:
             # 類型1：動漫名稱推薦

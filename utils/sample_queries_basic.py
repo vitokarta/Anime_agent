@@ -7,9 +7,8 @@ import sys
 import os
 from typing import List
 
-# 加入上一層路徑，方便匯入資料庫模組
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from database.anime_queries import create_anime_db
+# 引入資料庫模組
+from utils.database.anime_queries import create_anime_db
 
 def basic_title_search(query_title: str = "", season: str | None = None):
     """基本標題查詢範例

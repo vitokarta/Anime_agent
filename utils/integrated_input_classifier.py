@@ -15,9 +15,9 @@ import time
 from datetime import datetime
 from openai import OpenAI
 
-from utils.sample_queries_basic import recommend_similar_anime ,basic_tag_search
-
 # 添加專案根目錄到 Python 路徑
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.sample_queries_basic import recommend_similar_anime, basic_tag_search
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # OpenAI API 設定
