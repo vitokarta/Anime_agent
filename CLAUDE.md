@@ -33,6 +33,18 @@ uv pip install -r requirements.txt
 - **Lemonade Server Client**: `models/client.py` provides OpenAI-compatible client for local LLM server
 - **Configuration**: `config.py` and `.env` manage server endpoints and API keys
 - **Default Model**: Qwen-2.5-7B-Instruct-NPU
+- **Memory System**: `memory/test_langchain_memory.py` implements ConversationSummaryBufferMemory for persistent chat context
+
+### Backend Services
+- **Flask API**: `backend/api.py` provides REST endpoints for anime data access
+- **Image Serving**: Serves anime cover images from local storage
+- **Database API**: JSON endpoints for frontend integration
+
+### Input Classification System
+- **Integrated Classifier**: `utils/integrated_input_classifier.py` - Main entry point for user input classification
+- **Input Type Detection**: `utils/input_type.py` - Determines if user wants specific anime or genre-based recommendations
+- **Genre Classification**: `utils/classify_genre.py` - Maps user descriptions to anime genres using LLM
+- **Output Format**: Returns structured arrays: `[1, anime_name]`, `[2, genre1, genre2, genre3]`, or `[3, user_input]`
 
 ### MCP (Model Context Protocol) Integration
 
@@ -108,6 +120,12 @@ python mcp_web_search/test_brave_search.py
 python mcp_web_search/test_brave_search.py "your search query"
 ```
 
+**Test LangChain memory integration**:
+```bash
+# Test ConversationSummaryBufferMemory
+python memory/test_langchain_memory.py
+```
+
 **Debug MCP connections**:
 ```bash
 # Test SQLite MCP server connection
@@ -118,6 +136,25 @@ python mcp_sqlite/debug_mcp_format.py
 
 # Debug web search MCP
 python mcp_web_search/debug_brave_search.py
+```
+
+**Run Flask backend server**:
+```bash
+# Start API server on port 5000
+python backend/api.py
+```
+
+**Test input classification system**:
+```bash
+# Interactive mode
+python utils/integrated_input_classifier.py
+
+# Direct input classification
+python utils/integrated_input_classifier.py "想看輕鬆療癒的日常或搞笑動漫，有推薦嗎"
+
+# Test individual components
+python utils/input_type.py
+python utils/classify_genre.py
 ```
 
 ## Important Technical Details
@@ -134,6 +171,24 @@ The `test_sqlite_llm.py` implements a sophisticated natural language to SQL conv
 - **Safety Checks**: Prevents dangerous SQL operations (DROP, DELETE, UPDATE, etc.)
 - **Natural Language Processing**: Converts queries like "找出評分最高的5部奇幻動漫" to appropriate SQL
 - **MCP Tool Integration**: Uses MCP server tools (`read_query`, `list_tables`, `describe_table`)
+
+### LangChain Memory Integration
+The `memory/test_langchain_memory.py` provides conversational AI with persistent context:
+
+- **ConversationSummaryBufferMemory**: Maintains chat history with token limit management
+- **LemonadeLanguageModel**: LangChain-compatible wrapper for local LLM server
+- **Memory Persistence**: Save/load conversation context to files
+- **Interactive Chat**: Command-line interface for testing memory functionality
+
+### Input Classification Architecture
+The `utils/integrated_input_classifier.py` implements a three-stage classification system:
+
+1. **Type Detection**: Uses LLM to classify user input into 3 categories:
+   - Type 1: Specific anime name mentioned (e.g., "recommend anime like Naruto")
+   - Type 2: Genre/feature-based requests (e.g., "recommend slice-of-life anime")
+   - Type 3: Other/unhandleable requests
+2. **Content Extraction**: For Type 1, extracts anime names; for Type 2, maps to database genres
+3. **Output Generation**: Returns structured arrays and saves results to `return.json`
 
 ### Environment Variables
 Required environment variables in `.env`:
@@ -171,3 +226,10 @@ $env:PYTHONIOENCODING="utf-8"
 
 ### Database Schema Updates
 The schema management system automatically handles migrations, but manually run `create_schema.py` after major changes to ensure consistency.
+
+### Import Path Issues
+When working with the input classification system, ensure proper Python path setup:
+- The project root must be added to `sys.path` for cross-module imports
+- Use `from models.client import lemonade` for LLM client access
+- Database path: `anime_database.db` is located in project root
+- All classification utilities require the Lemonade server to be running

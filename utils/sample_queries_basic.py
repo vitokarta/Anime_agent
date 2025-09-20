@@ -98,20 +98,36 @@ def recommend_similar_anime(anime_name: str, limit: int = 10, season: str | None
 
 def main():
     """執行基本範例"""
-    # # 1) 不指定季度的標題查詢
+    import json
+    with open("return.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    number = data.get("result")
+    print(f"讀取到的結果: {number}",number[0],",",number[1])
+    if number[0] == 1:
+        # 1) 特定動漫推薦 1
+        recommend_similar_anime(number[1])
+    elif number[0] == 2:
+        # 2) 標籤查詢 2
+        basic_tag_search(number[1]) 
+    elif number[0] == 3:
+        # 3) 其他查詢 3
+        basic_title_search(number[1])
+    else:
+        print("未知的查詢類型")
+    # # 1) 不指定季度的標題查詢 3
     # basic_title_search("香格里拉·開拓異境")
 
-    # # 2) 指定季度 (前端格式) 的標題查詢，例如 2024-4 對應 2024-Fall
+    # # 2) 指定季度 (前端格式) 的標題查詢，例如 2024-4 對應 2024-Fall 3
     # basic_title_search("DAN DA DAN", season="2024-4")
 
-    # 3) 相似動漫推薦
-    recommend_similar_anime("DAN DA DAN")
+    # 3) 相似動漫推薦, 1
+    # recommend_similar_anime("DAN DA DAN")
 
-    # # 4) 標籤 + 季度查詢 (可組合)
+    # # 4) 標籤 + 季度查詢 (可組合) 2
     # basic_tag_search(["奇幻"], season="2024-4")
 
-    # # 5) 純標籤查詢 (無季度)
-    # basic_tag_search(["奇幻", "冒險"]) 
+    # # 5) 純標籤查詢 (無季度) 2
+    #basic_tag_search(["奇幻", "冒險"]) 
 
 if __name__ == "__main__":
     main()
