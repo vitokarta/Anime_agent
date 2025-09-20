@@ -416,6 +416,65 @@ class AnimeDatabase:
         # 失敗 -> None (不套用季節過濾)
         return None
 
+    def recommend_similar_anime(self, anime_name: str, limit: int = 10, season: str = None) -> List[Dict]:
+        """根據指定動漫推薦相似的動漫
+        
+        Args:
+            anime_name: 要搜尋的動漫名稱
+            limit: 推薦結果數量限制
+            season: 可選季度過濾
+            
+        Returns:
+            推薦的動漫列表 (按標籤匹配度排序)
+            
+        流程:
+            1. 透過 query_anime_by_title 找到指定動漫
+            2. 提取該動漫的 genres_json 作為標籤
+            3. 使用這些標籤透過 query_anime_by_tags 找相似動漫
+            4. 排除原本搜尋的動漫本身
+        """
+        # 步驟1: 先找到指定的動漫
+        search_results = self.query_anime_by_title(anime_name, limit=1)
+        
+        if not search_results:
+            return []
+        
+        target_anime = search_results[0]
+        
+        # 步驟2: 提取該動漫的標籤
+        try:
+            genres_json = target_anime.get('genres_json', '[]')
+            anime_tags = json.loads(genres_json) if genres_json else []
+        except (json.JSONDecodeError, TypeError):
+            anime_tags = []
+        
+        if not anime_tags:
+            return []
+        
+        # 步驟3: 使用標籤查詢相似動漫
+        similar_results = self.query_anime_by_tags(
+            tags=anime_tags, 
+            limit=limit + 5,  # 多取一些，排除原動漫後可能不足
+            season=season
+        )
+        
+        # 步驟4: 排除原本的動漫 (比較 title 或 id)
+        target_title = target_anime.get('title', '').lower()
+        target_id = target_anime.get('id')
+        
+        filtered_results = []
+        for anime in similar_results:
+            # 排除相同的動漫
+            if (anime.get('title', '').lower() != target_title and 
+                anime.get('id') != target_id):
+                filtered_results.append(anime)
+                
+            # 達到所需數量就停止
+            if len(filtered_results) >= limit:
+                break
+        
+        return filtered_results
+
 # 便利函數
 def create_anime_db(db_path: str = "anime_database.db") -> AnimeDatabase:
     """創建AnimeDatabase實例的便利函數"""
