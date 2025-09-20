@@ -64,6 +64,18 @@ def basic_tag_search(tags: List[str] | None = None, season: str | None = None):
     #     print(f"     匹配標籤: {anime['matched_tags']}")
     #     print()
 
+def recommend_similar_anime(anime_name: str, limit: int = 10, season: str | None = None):
+    """相似動漫推薦範例"""
+    print(f"=== 推薦與「{anime_name}」相似的動漫 ===")
+    
+    db = create_anime_db("anime_database.db")
+    results = db.recommend_similar_anime(anime_name, limit=limit, season=season)
+    
+    for anime in results:
+        print(anime)
+    
+    return results
+
 ## 原本的 season_search 功能已整合進 basic_title_search / basic_tag_search，故移除。
 
 # def custom_parameters():
@@ -86,16 +98,19 @@ def basic_tag_search(tags: List[str] | None = None, season: str | None = None):
 
 def main():
     """執行基本範例"""
-    # 1) 不指定季度的標題查詢
-    basic_title_search("香格里拉·開拓異境")
+    # # 1) 不指定季度的標題查詢
+    # basic_title_search("香格里拉·開拓異境")
 
-    # 2) 指定季度 (前端格式) 的標題查詢，例如 2024-4 對應 2024-Fall
-    basic_title_search("DAN DA DAN", season="2024-4")
+    # # 2) 指定季度 (前端格式) 的標題查詢，例如 2024-4 對應 2024-Fall
+    # basic_title_search("DAN DA DAN", season="2024-4")
 
-    # # 3) 標籤 + 季度查詢 (可組合)
+    # 3) 相似動漫推薦
+    recommend_similar_anime("DAN DA DAN")
+
+    # # 4) 標籤 + 季度查詢 (可組合)
     # basic_tag_search(["奇幻"], season="2024-4")
 
-    # # # 4) 純標籤查詢 (無季度)
+    # # 5) 純標籤查詢 (無季度)
     # basic_tag_search(["奇幻", "冒險"]) 
 
 if __name__ == "__main__":
