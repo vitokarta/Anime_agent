@@ -27,6 +27,7 @@ The project uses `.env` file for configuration. Key environment variables:
 - `LEMONADE_BASE_URL`: URL to the local Lemonade Server API
 - `LEMONADE_API_KEY`: API key for authentication
 - `DEFAULT_MODEL`: Default AI model to use (e.g., "Qwen-2.5-7B-Instruct-NPU")
+- `BRAVE_API_KEY`: API key for Brave Search (web search functionality)
 
 ## Core Architecture
 
@@ -46,7 +47,11 @@ Contains seasonal anime CSV files (2024_fall.csv, 2024_spring.csv, etc.) with an
 
 ### MCP Integration
 - **MCP Fetch** (`mcp_fetch/`): Model Context Protocol fetch functionality
-- **MCP Web Search** (`mcp_web_search/`): Web search capabilities via MCP
+- **MCP Web Search** (`mcp_web_search/`): Web search capabilities via Brave Search API
+  - Uses Brave Search MCP server for web search functionality
+  - Supports both web and local search types
+  - Automatically saves search results to txt files
+  - Integrates with Lemonade Server for intelligent question answering
 
 ## Common Development Commands
 
@@ -65,13 +70,26 @@ python utils/database/create_database.py
 python models/client.py
 ```
 
+### Web Search Operations
+```bash
+# Test Brave Search MCP connection
+python mcp_web_search/debug_brave_search.py
+
+# Perform web search with automatic txt saving and AI answering
+python mcp_web_search/test_brave_search.py "your search query"
+
+# Advanced search with custom parameters (query, count, offset, search_type)
+python mcp_web_search/test_brave_search.py "AI news" 15 0 web
+
+# Legacy SmartSearch testing (backup)
+python mcp_web_search/debug_mcp.py
+python mcp_web_search/test_web_search.py
+```
+
 ### MCP Testing
 ```bash
 # Test MCP fetch functionality
 python mcp_fetch/test_mcp_client.py
-
-# Test web search capabilities
-python mcp_web_search/test_web_search.py
 ```
 
 ## Key Files and Dependencies
@@ -79,6 +97,8 @@ python mcp_web_search/test_web_search.py
 ### Dependencies (requirements.txt)
 - `pandas==2.3.2`: Data manipulation for CSV processing
 - `python-dotenv`: Environment variable management
+- `mcp`: Model Context Protocol client library
+- `openai`: OpenAI-compatible client for Lemonade Server integration
 
 ### Configuration Files
 - `config.py`: Centralized configuration loading from environment variables
@@ -92,9 +112,28 @@ The system uses tag-based filtering with SQLite LIKE queries:
 - Results are ordered by rating in descending order
 - Supports LIMIT for controlling result count
 
+## Web Search Integration
+
+### Brave Search MCP Architecture
+- **Primary Search Engine**: Uses Brave Search via MCP server (`@modelcontextprotocol/server-brave-search`)
+- **Plain Text Parsing**: Brave Search returns results in plain text format, parsed by `parse_brave_plain_text()`
+- **Automatic File Saving**: All search results are automatically saved to timestamped txt files in `mcp_web_search/`
+- **AI-Powered Answering**: Qwen model analyzes search results and provides intelligent answers to user queries
+- **Dual Search Types**: Supports both web search (`brave_web_search`) and local business search (`brave_local_search`)
+
+### Search Workflow
+1. Query submitted via command line
+2. Brave Search MCP server called with search parameters
+3. Plain text results parsed into structured format
+4. Results displayed to user and saved to txt file
+5. Top results sent to Qwen for intelligent question answering
+6. Final answer displayed with source citations
+
 ## Development Notes
 
 - The project uses Chinese comments and documentation in some files
 - All paths should use the project root as the working directory
 - Database operations include proper connection handling and error management
 - The LemonadeClient provides both simple and complex chat interfaces for AI interactions
+- Web search results are automatically archived in `mcp_web_search/` directory with descriptive filenames
+- Qwen system prompt is optimized for analyzing web search results and providing accurate, cited answers
