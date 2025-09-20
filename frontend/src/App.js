@@ -4,7 +4,7 @@ import './App.css';
 
 // 定義前端顯示用的季節列表（用月份顯示）
 const displaySeasons = [
-  { value: 'random', label: '🎲 隨機推薦' },  // 預設為隨機推薦
+  { value: 'random', label: '季度不限' },  // 預設為隨機推薦
   { value: '2025-Fall', label: '2025-10月' },
   { value: '2025-Summer', label: '2025-7月' },
   { value: '2025-Spring', label: '2025-4月' },
@@ -55,6 +55,59 @@ const milkTeaTheme = {
 };
 
 
+
+// 我的專區組件
+const MyArea = ({ favorites, onBack }) => {
+  if (!favorites || favorites.length === 0) {
+    return (
+      <div className="flex flex-col items-center p-4">
+        <h2 className="text-xl font-bold mb-4">我的專區</h2>
+        <p>還沒有收藏的動漫哦～</p>
+        <button 
+          onClick={onBack}
+          className="mt-4 px-4 py-2 bg-milkTeaTheme-accent text-white rounded hover:bg-milkTeaTheme-accentHover"
+        >
+          返回
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center p-4">
+      <h2 className="text-xl font-bold mb-4">我的專區</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {favorites.map((anime) => (
+          <div key={anime.id} className="bg-white rounded-lg shadow-lg p-4">
+            <img 
+              src={`http://localhost:5000/images/${encodeURIComponent(anime.image_path)}`}
+              alt={anime.title}
+              className="w-full h-48 object-cover rounded"
+            />
+            <h3 className="text-lg font-semibold mt-2">{anime.title}</h3>
+            <p className="text-sm text-gray-600">{anime.season}</p>
+            <div className="mt-2">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4" />
+                <span>{anime.rating}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>{anime.viewers_count}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button 
+        onClick={onBack}
+        className="mt-4 px-4 py-2 bg-milkTeaTheme-accent text-white rounded hover:bg-milkTeaTheme-accentHover"
+      >
+        返回
+      </button>
+    </div>
+  );
+};
 
 function App() {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'recommendations', 'myArea'
@@ -117,27 +170,68 @@ function App() {
 
 
 
-  // 載入本地存儲的收藏
+  // 載入我的專區資料
   useEffect(() => {
-    const savedFavorites = localStorage.getItem('anime-favorites');
-    const savedDislikes = localStorage.getItem('anime-dislikes');
-
-    if (savedFavorites) {
-      setFavorites(JSON.parse(savedFavorites));
-    }
-    if (savedDislikes) {
-      setDislikes(JSON.parse(savedDislikes));
-    }
+    const fetchFavorites = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/anime/favorites');
+        if (response.ok) {
+          const data = await response.json();
+          setFavorites(data);
+        }
+      } catch (error) {
+        console.error('Error fetching favorites:', error);
+      }
+    };
+    fetchFavorites();
   }, []);
 
-  // 保存收藏到本地存儲
-  useEffect(() => {
-    localStorage.setItem('anime-favorites', JSON.stringify(favorites));
-  }, [favorites]);
+  // 處理喜歡/不喜歡的操作
+  const handleLikeDislike = async (animeId, action) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/anime/like/${animeId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action })
+      });
 
-  useEffect(() => {
-    localStorage.setItem('anime-dislikes', JSON.stringify(dislikes));
-  }, [dislikes]);
+      if (response.ok) {
+        // 更新當前推薦列表中的動漫狀態
+        setCurrentRecommendations(prevRecs => 
+          prevRecs.map(anime => {
+            if (anime.id === animeId) {
+              // 如果已經是該狀態，則切換為相反狀態
+              if (action === 'like') {
+                return {
+                  ...anime,
+                  liked: !anime.liked,
+                  is_disliked: false // 確保不喜歡狀態被清除
+                };
+              } else {
+                return {
+                  ...anime,
+                  is_disliked: !anime.is_disliked,
+                  liked: false // 確保喜歡狀態被清除
+                };
+              }
+            }
+            return anime;
+          })
+        );
+        if (action === 'like') {
+          // 重新獲取最新的收藏列表
+          const favResponse = await fetch('http://localhost:5000/api/anime/favorites');
+          const favData = await favResponse.json();
+          setFavorites(favData);
+        }
+        // 可以在這裡添加用戶反饋，比如顯示一個提示消息
+      }
+    } catch (error) {
+      console.error('Error updating like/dislike status:', error);
+    }
+  };
 
   // 處理推薦生成
   const handleGenerateRecommendations = async (count, currentDescription = '') => {
@@ -522,20 +616,18 @@ function App() {
                       {/* 操作按鈕 */}
                       <div className="action-buttons">
                         <button
-                          onClick={() => handleDislike(anime.id)}
-                          className={`action-btn dislike-btn ${dislikes.includes(anime.id) ? 'active' : ''
-                            }`}
+                          onClick={() => handleLikeDislike(anime.id, 'dislike')}
+                          className={`action-btn dislike-btn ${anime.is_disliked ? 'active' : ''}`}
                         >
                           <X className="btn-icon" />
-                          <span>{dislikes.includes(anime.id) ? '已標記' : '不喜歡'}</span>
+                          <span>{anime.is_disliked ? '已標記' : '不喜歡'}</span>
                         </button>
                         <button
-                          onClick={() => handleLike(anime)}
-                          className={`action-btn like-btn ${favorites.find(fav => fav.id === anime.id) ? 'active' : ''
-                            }`}
+                          onClick={() => handleLikeDislike(anime.id, 'like')}
+                          className={`action-btn like-btn ${anime.liked ? 'active' : ''}`}
                         >
-                          <Heart className={`btn-icon ${favorites.find(fav => fav.id === anime.id) ? 'filled' : ''}`} />
-                          <span>{favorites.find(fav => fav.id === anime.id) ? '已收藏' : '喜歡'}</span>
+                          <Heart className={`btn-icon ${anime.liked ? 'filled' : ''}`} />
+                          <span>{anime.liked ? '已收藏' : '喜歡'}</span>
                         </button>
                       </div>
                     </div>
@@ -558,61 +650,120 @@ function App() {
   };
 
   // 我的專區組件
-  const MyAreaView = () => (
-    <div className="my-area-page" style={{ background: milkTeaTheme.background }}>
-      <div className="my-area-container">
-        <div className="my-area-header">
-          <h1 className="my-area-title">我的專區</h1>
-          <button
-            onClick={() => setCurrentView('home')}
-            className="back-btn-small"
-          >
-            返回主頁
-          </button>
-        </div>
+  const MyAreaView = () => {
+    const [myFavorites, setMyFavorites] = useState([]);
+    
+    // 載入收藏的動漫
+    useEffect(() => {
+      const fetchFavorites = async () => {
+        try {
+          const response = await fetch('http://localhost:5000/api/anime/favorites');
+          if (response.ok) {
+            const data = await response.json();
+            setMyFavorites(data);
+          }
+        } catch (error) {
+          console.error('Error fetching favorites:', error);
+        }
+      };
+      fetchFavorites();
+    }, []);
 
-        {favorites.length === 0 ? (
-          <div className="empty-favorites">
-            <Heart className="empty-icon" />
-            <p className="empty-title">還沒有收藏的動漫</p>
-            <p className="empty-subtitle">開始推薦並收藏你喜歡的動漫吧！</p>
+    // 處理移除收藏
+    const handleRemoveFavorite = async (animeId) => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/anime/like/${animeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ action: 'like' }) // 再次點擊喜歡來取消
+        });
+
+        if (response.ok) {
+          // 從列表中移除該動漫
+          setMyFavorites(prev => prev.filter(anime => anime.id !== animeId));
+        }
+      } catch (error) {
+        console.error('Error removing favorite:', error);
+      }
+    };
+
+    return (
+      <div className="my-area-page" style={{background: milkTeaTheme.background}}>
+        <div className="my-area-container">
+          <div className="my-area-header">
+            <h1 className="my-area-title">我的專區</h1>
+            <button
+              onClick={() => setCurrentView('home')}
+              className="back-btn-small"
+            >
+              返回主頁
+            </button>
           </div>
-        ) : (
-          <div className="favorites-grid">
-            {favorites.map(anime => (
-              <div key={anime.id} className="favorite-card">
-                <div className="favorite-cover">
-                  <img
-                    src={anime.cover}
-                    alt={anime.title}
-                    className="favorite-image"
-                  />
-                  <button
-                    onClick={() => removeFavorite(anime.id)}
-                    className="remove-btn"
-                  >
-                    <X className="remove-icon" />
-                  </button>
-                  <div className="favorite-rating">
-                    <Star className="star-small" />
-                    <span>{anime.rating}</span>
-                  </div>
-                </div>
 
-                <div className="favorite-info">
-                  <h3 className="favorite-title">{anime.title}</h3>
-                  <div className="favorite-stats">
-                    🗓️ {anime.season} • 👥 {(anime.viewers / 1000000).toFixed(1)}M
+          {(!myFavorites || myFavorites.length === 0) ? (
+            <div className="empty-favorites">
+              <Heart className="empty-icon" />
+              <p className="empty-title">還沒有收藏的動漫</p>
+              <p className="empty-subtitle">開始推薦並收藏你喜歡的動漫吧！</p>
+            </div>
+          ) : (
+            <div className="favorites-grid">
+              {myFavorites.map(anime => (
+                <div key={anime.id} className="favorite-card">
+                  <div className="favorite-cover">
+                    <img
+                      src={`http://localhost:5000/images/${encodeURIComponent(anime.image_path.split('/').pop())}`}
+                      alt={anime.title}
+                      className="favorite-image"
+                      onError={(e) => {
+                        console.error('Image failed to load:', anime.image_path);
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
+                      }}
+                    />
+                    <button
+                      onClick={() => handleRemoveFavorite(anime.id)}
+                      className="remove-btn"
+                    >
+                      <X className="remove-icon" />
+                    </button>
+                    <div className="favorite-rating">
+                      <Star className="star-small" />
+                      <span>{anime.rating}</span>
+                    </div>
                   </div>
-                  <div className="favorite-genres">
-                    {anime.genres.slice(0, 3).map(genre => (
-                      <span key={genre} className="favorite-genre">
-                        {genre}
-                      </span>
-                    ))}
+
+                  <div className="favorite-info">
+                    <h3 className="favorite-title">{anime.title}</h3>
+                    <div className="favorite-stats">
+                      🗓️ {anime.season} • 👥 {parseInt(anime.viewers_count || 0).toLocaleString()}
+                    </div>
+                    <div className="favorite-genres">
+                      {(() => {
+                        try {
+                          // 嘗試解析 JSON，如果失敗則回傳空陣列
+                          const genres = anime.genres_json ? 
+                            (typeof anime.genres_json === 'string' ? 
+                              JSON.parse(anime.genres_json) : 
+                              anime.genres_json) : 
+                            [];
+                          return Array.isArray(genres) ? 
+                            genres.slice(0, 3).map(genre => (
+                              <span key={genre} className="favorite-genre">
+                                {genre}
+                              </span>
+                            )) : 
+                            null;
+                        } catch (error) {
+                          console.error('Error parsing genres:', error);
+                          return null;
+                        }
+                      })()}
                   </div>
                   <p className="favorite-desc">
-                    {anime.description.slice(0, 100)}...
+                    {anime.synopsis?.slice(0, 100)}...
                   </p>
                 </div>
               </div>
@@ -622,6 +773,7 @@ function App() {
       </div>
     </div>
   );
+};
 
   // 主渲染
   switch (currentView) {
