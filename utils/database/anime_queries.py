@@ -21,13 +21,6 @@ class AnimeDatabase:
         self.TAG_BONUS_SCORE = 0.5
         # 最低評分門檻
         self.MIN_RATING_THRESHOLD = 2.0
-        # 前端季度代碼對應 (月份對應: 1月→Winter, 4月→Spring, 7月→Summer, 10月→Fall)
-        self.SEASON_CODE_MAP = {
-            1: "Winter",
-            4: "Spring", 
-            7: "Summer",
-            10: "Fall"
-        }
     
     def get_connection(self):
         """建立資料庫連接"""
@@ -256,11 +249,12 @@ class AnimeDatabase:
             # 指定季度查詢
             results = db.query_anime_by_tags(["奇幻"], season="2024-Fall")
         """
+        print("season")
         if tag_bonus is None:
             tag_bonus = self.TAG_BONUS_SCORE
         if min_rating is None:
             min_rating = self.MIN_RATING_THRESHOLD
-            
+        print("season")
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -374,46 +368,31 @@ class AnimeDatabase:
 
     # ===== 新增: 季度代碼轉換 =====
     def _convert_season_code(self, code: str) -> Optional[str]:
-        """將前端傳入的季度代碼轉換為資料庫格式。
+        """處理前端傳入的季度代碼。
 
-        支援輸入格式:
-        - 年-季數: 2024-1, 2024-2, 2024-3, 2024-4
-        - 年_季數: 2024_1
-        - 年Q季: 2024Q1
-        - 英文季: 2024-Winter / 2024-Spring / 2024-Summer / 2024-Fall (原生格式直接返回)
+        前端現在直接傳送標準格式: 2025-Winter / 2025-Spring / 2025-Summer / 2025-Fall
+        或者空值（不進行季度過濾）
 
-        回傳: 'YYYY-SeasonName' 或 None (輸入無效時)
-        無效輸入會回傳 None 並不套用季節過濾，而不是丟例外，避免前端壞輸入導致整體失敗。
-        若需嚴格模式可改為 raise ValueError。
+        Args:
+            code: 季度代碼字符串，可能為空
+
+        Returns:
+            str: 標準格式的季度代碼（如 '2025-Winter'）
+            None: 當輸入為空或無效時，不進行季度過濾
         """
-        if not code:
+        if not code or not code.strip():
             return None
+        
         raw = code.strip()
 
-        # 已是資料庫格式
+        # 檢查是否為標準格式: YYYY-Season
         if re.match(r"^\d{4}-(Winter|Spring|Summer|Fall)$", raw, re.IGNORECASE):
             # 標準化首字母大寫
             year, season_name = raw.split('-')
             season_name_cap = season_name.capitalize()
             return f"{year}-{season_name_cap}"
 
-        # 年-季數 或 年_季數
-        m = re.match(r"^(\d{4})[-_](\d)$", raw)
-        if m:
-            year = m.group(1)
-            num = int(m.group(2))
-            if num in self.SEASON_CODE_MAP:
-                return f"{year}-{self.SEASON_CODE_MAP[num]}"
-
-        # 年Q季
-        m = re.match(r"^(\d{4})Q(\d)$", raw, re.IGNORECASE)
-        if m:
-            year = m.group(1)
-            num = int(m.group(2))
-            if num in self.SEASON_CODE_MAP:
-                return f"{year}-{self.SEASON_CODE_MAP[num]}"
-
-        # 失敗 -> None (不套用季節過濾)
+        # 如果不是標準格式，返回 None（不進行季度過濾）
         return None
 
     def recommend_similar_anime(self, anime_name: str, limit: int = 10, season: str = None) -> List[Dict]:
@@ -435,7 +414,6 @@ class AnimeDatabase:
         """
         # 步驟1: 先找到指定的動漫
         search_results = self.query_anime_by_title(anime_name, limit=1)
-        
         if not search_results:
             return []
         
@@ -450,13 +428,13 @@ class AnimeDatabase:
         
         if not anime_tags:
             return []
-        
         # 步驟3: 使用標籤查詢相似動漫
         similar_results = self.query_anime_by_tags(
             tags=anime_tags, 
             limit=limit + 5,  # 多取一些，排除原動漫後可能不足
             season=season
         )
+        #print(similar_results)
         
         # 步驟4: 排除原本的動漫 (比較 title 或 id)
         target_title = target_anime.get('title', '').lower()

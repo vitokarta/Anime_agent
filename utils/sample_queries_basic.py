@@ -48,10 +48,10 @@ def basic_tag_search(tags: List[str] | None = None, season: str | None = None):
     db = create_anime_db("anime_database.db")
 
     # 基本查詢 (需用關鍵字參數 season=season，避免被當成 limit )
-    results = db.query_anime_by_tags(tags or [], season=season, limit=5)
+    results = db.query_anime_by_tags(tags or [], season=season)
 
-    for anime in results:
-        print(anime)
+    # for anime in results:
+    #     print(anime)
     
     return results
 
@@ -68,10 +68,11 @@ def recommend_similar_anime(anime_name: str, limit: int = 10, season: str | None
     print(f"=== 推薦與「{anime_name}」相似的動漫 ===")
     
     db = create_anime_db("anime_database.db")
+
     results = db.recommend_similar_anime(anime_name, limit=limit, season=season)
     
-    for anime in results:
-        print(anime)
+    # for anime in results:
+    #     print(anime)
     
     return results
 
