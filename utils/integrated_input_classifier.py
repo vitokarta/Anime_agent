@@ -15,6 +15,8 @@ import time
 from datetime import datetime
 from openai import OpenAI
 
+from utils.sample_queries_basic import recommend_similar_anime ,basic_tag_search
+
 # 添加專案根目錄到 Python 路徑
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -113,7 +115,7 @@ def use_openai_for_genre_classification(user_input, genres_list, max_retries=3):
         print(f"OpenAI 分類失敗：{str(e)}")
         return []
 
-def classify_input_request(user_input, max_retries=3):
+def classify_input_request(user_input, season, max_retries=3):
     """
     分類用戶輸入請求
     返回格式：
@@ -197,13 +199,10 @@ def classify_input_request(user_input, max_retries=3):
             if anime_name:
                 # 驗證動漫是否在資料庫中
                 reference_genres, found_title = get_anime_genres(db_path, anime_name)
-                if found_title:
-                    return [1, found_title]
-                else:
-                    print(f"資料庫中未找到動漫：{anime_name}")
-                    return [3, user_input]
-            else:
-                return [3, user_input]
+
+                result = recommend_similar_anime(anime_name, season)
+                print(f"推薦結果：{result}")
+                return [1, result]
 
         elif request_type == 2:
             # 類型2：類別推薦
@@ -213,14 +212,9 @@ def classify_input_request(user_input, max_retries=3):
 
             # 使用 OpenAI 進行類別分類
             recommended_genres = use_openai_for_genre_classification(user_input, genres_list)
+            result = basic_tag_search(recommended_genres, season)
 
-            if recommended_genres:
-                return [2] + recommended_genres
-            else:
-                # 如果分類失敗，返回類型3
-                print("類別分類失敗，歸類為類型3")
-                return [3, user_input]
-
+            return [2, result]
         else:
             # 類型3：其他
             return [3, user_input]

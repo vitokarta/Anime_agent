@@ -1,10 +1,14 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 import sqlite3
 from flask_cors import CORS
 import os
 import json
-from flask_cors import CORS
-import os
+import sys
+
+# Add project root to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils.integrated_input_classifier import classify_input_request
+from utils.database.anime_queries import create_anime_db
 
 app = Flask(__name__)
 CORS(app)
@@ -99,5 +103,51 @@ def get_anime_list(count):
     conn.close()
     return jsonify(result)
 
+@app.route('/api/anime/recommend', methods=['POST'])
+def get_anime_recommendations():
+    try:
+        print("\n=== New Recommendation Request ===")
+        data = request.get_json()
+        print(f"Raw request data: {data}")
+        
+        count = data.get('count', 5)
+        season = data.get('season', '')
+        description = data.get('description', '')
+        use_favorites = data.get('useFavorites', False)
+        favorites = data.get('favorites', [])
+
+        classification_result = classify_input_request(description)
+
+        if classification_result[0] == 1 or classification_result[0] == 2:
+            # 類型1：動漫名稱推薦
+            print(f"Classified as Type 1 (Anime Name): {classification_result[1]}")
+        else:
+            return None
+
+
+        
+
+
+        #sample return
+        # result.append({
+        #         'id': anime_dict.get('id'),
+        #         'title': anime_dict.get('title', '未知標題'),
+        #         'cover': image_url,
+        #         'season': anime_dict.get('season', '2024-1月'),
+        #         'rating': float(anime_dict.get('rating', 0)) if anime_dict.get('rating') else 0.0,
+        #         'viewers': anime_dict.get('viewers_count', 100000),
+        #         'genres': genres,
+        #         'description': anime_dict.get('synopsis', '暫無描述'),
+        #         'platforms': platforms,
+        #         'reason': reason
+        #     })
+        # return jsonify(result)
+
+    except Exception as e:
+        print(f"Error getting anime recommendations: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
+
+    
