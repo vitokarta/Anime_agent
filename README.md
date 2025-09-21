@@ -1,134 +1,258 @@
-# 動漫推薦 AI Agent
+# Anime Recommendation AI Agent
 
-基於標籤過濾和評分排序的動漫推薦系統，使用 SQLite 資料庫儲存動漫資料。
+An intelligent anime recommendation system powered by tag-based filtering and rating-based sorting, with SQLite database storage for efficient data management.
 
-## 功能特色
+## 🚀 Features
 
-- 🏷️ **標籤過濾**: 根據動漫類型標籤進行精確搜尋
-- ⭐ **評分排序**: 自動按評分降序排列推薦結果
-- 🔢 **數量控制**: 可設定回傳前 N 筆推薦結果
-- 📊 **評分門檻**: 支援最低評分限制篩選
-- 💾 **本地儲存**: 使用 SQLite 進行永久資料儲存
+- 🏷️ **Smart Tag Filtering**: Precise anime search based on genre and category tags
+- ⭐ **Rating-Based Sorting**: Automatic ranking by user ratings in descending order
+- 🔢 **Flexible Results Control**: Configurable top-N recommendation limits
+- 📊 **Rating Threshold**: Minimum rating filtering for quality assurance
+- 💾 **Persistent Storage**: SQLite database for reliable local data storage
+- 🤖 **AI-Powered Recommendations**: Intelligent content matching and suggestions
+- 🌐 **RESTful API**: Clean API endpoints for integration
+- 🖥️ **Web Interface**: Modern frontend for user interaction
 
+## 🛠️ Tech Stack
 
-## 環境設定（Windows，使用 uv）
+- **Backend**: Python, Flask, SQLite
+- **Frontend**: React.js
+- **AI/ML**: LangChain, OpenAI API
+- **Package Management**: UV (Ultra-fast Python package manager)
+- **Database**: SQLite with custom anime schema
 
-以下流程使用 uv（極速的 Python 套件/環境管理工具）。做到「第四點」即可開始開發，之後若要進階鎖定版本再補充。
+## 📋 Prerequisites
 
-### 1. 安裝 uv（單檔執行檔，無需系統 Python）
+- Python 3.9+
+- Node.js 16+ (for frontend)
+- Windows 10/11 (current setup optimized for Windows)
+
+## ⚡ Quick Start (Windows with UV)
+
+We use [UV](https://github.com/astral-sh/uv) - an extremely fast Python package and environment manager. Follow steps 1-4 to start development immediately.
+
+### 1. Install UV (Single executable, no system Python required)
 ```powershell
 irm https://astral.sh/uv/install.ps1 | iex
-# 若剛裝完當前視窗抓不到 uv，可：
+# If uv is not recognized in current window:
 $env:PATH += ";$HOME\.local\bin"; uv --version
 ```
 
-### 2. 建立 / 啟用虛擬環境
+### 2. Create and Activate Virtual Environment
 ```powershell
-# 建立 .venv 目錄（若已存在可跳過）
+# Create .venv directory (skip if exists)
 uv venv .venv
-# 啟用
-\.\.venv\Scripts\Activate.ps1
-#不能就換
+
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+# Alternative activation method:
 .venv\Scripts\activate
 ```
 
-### 3. 安裝專案相依套件
+### 3. Install Project Dependencies
 ```powershell
 uv pip install -r requirements.txt
 ```
 
-### 4. 新增套件（範例：requests）
+### 4. Run the Application
 ```powershell
-uv pip install requests
-uv pip freeze > requirements.txt   # 暫時寫回目前完整版本 (之後可改用 compile 流程產生鎖檔)
+# Start the Flask API server
+python api.py
+
+# In a new terminal, start the frontend (if available)
+cd frontend
+npm install
+npm start
 ```
 
-> 到這裡 (第 1~4 點) 你就可以開始開發與執行程式。
+### 5. Adding New Dependencies
+```powershell
+uv pip install <package-name>
+uv pip freeze > requirements.txt
+```
+
+> **Note**: Steps 1-4 are sufficient for development. Advanced dependency locking with `requirements.in` and `uv pip compile` can be implemented later for production deployments.
+
+## 📁 Project Structure
+
+```
+anime_agent/
+├── api.py                 # Flask API server
+├── config.py             # Configuration settings
+├── requirements.txt      # Python dependencies
+├── anime_database.db     # SQLite database
+├── anime_data/           # Raw anime data and images
+│   ├── data/            # CSV data files by season/year
+│   └── images/          # Anime cover images
+├── docs/                # Documentation
+├── frontend/            # React.js web interface
+├── mcp_*/              # Model Context Protocol integrations
+├── models/             # AI model configurations
+├── utils/              # Utility functions and database queries
+│   ├── database/       # Database utilities
+│   └── *.py           # Various utility modules
+└── memory/             # LangChain memory implementations
+```
+
+## 🔧 Configuration
+
+Key configuration files:
+- `config.py`: Main application settings
+- `requirements.txt`: Python package dependencies
+- `frontend/package.json`: Frontend dependencies
+
+## 📖 API Documentation
+
+### Anime Endpoints
+
+- `GET /api/anime` - Get all anime with optional filtering
+- `GET /api/anime/{id}` - Get specific anime details
+- `POST /api/anime/like/{id}` - Update like/dislike status
+- `GET /api/anime/recommendations` - Get AI-powered recommendations
+
+### Search and Filter
+
+- `POST /api/search` - Advanced search with multiple criteria
+- `GET /api/tags` - Get available tags and genres
+- `GET /api/ratings` - Get rating statistics
+
+## 🧪 Testing
+
+```powershell
+# Run test suite
+python -m pytest tests/
+
+# Run specific test file
+python test.py
+```
+
+## 🤝 Development Workflow
+
+### Branch Strategy
+
+- **Main Branch**: `main` (production-ready, deployable)
+- **Feature Branches**: Short-lived branches for specific features/fixes
+- **Integration**: Pull Request workflow for code review
+
+### Git Workflow
+
+#### Initial Setup
+```bash
+git clone <repository-url>
+cd anime_agent
+git checkout -b feature/<feature-name>
+```
+
+#### Daily Development
+```bash
+# Sync with main branch
+git checkout main
+git pull origin main
+git checkout feature/<feature-name>
+git rebase main  # or: git merge main
+```
+
+#### Making Changes
+```bash
+git add .
+git commit -m "feat: add new recommendation algorithm"
+git push -u origin feature/<feature-name>
+```
+
+#### Integration Options
+
+**Option A: Merge Commit (preserves branch history)**
+```bash
+git checkout main
+git pull origin main
+git merge --no-ff feature/<feature-name>
+git push origin main
+```
+
+**Option B: Linear History (rebase + fast-forward)**
+```bash
+git checkout feature/<feature-name>
+git rebase origin/main
+git checkout main
+git merge --ff-only feature/<feature-name>
+git push origin main
+```
+
+#### Cleanup
+```bash
+git checkout main
+git pull origin main
+git branch -d feature/<feature-name>
+git push origin --delete feature/<feature-name>
+```
+
+### Git Commands Reference
+
+| Action | Command |
+|--------|---------|
+| Create feature branch | `git checkout -b feature/<description>` |
+| Sync main | `git pull origin main` |
+| Update feature branch | `git rebase main` or `git merge main` |
+| Push changes | `git push` (first time: `git push -u`) |
+| Resolve conflicts | `git add; git rebase --continue` |
+| Delete local branch | `git branch -d <branch>` |
+| Delete remote branch | `git push origin --delete <branch>` |
+| Merge with history | `git merge --no-ff <branch>` |
+| Linear merge | `git rebase main → git merge --ff-only <branch>` |
+
+## 🚀 Deployment
+
+### Production Setup
+
+1. **Environment Variables**: Configure production settings
+2. **Database**: Set up production SQLite or migrate to PostgreSQL
+3. **Static Files**: Build and serve frontend assets
+4. **Process Management**: Use systemd, supervisor, or Docker
+
+### Docker Support (Optional)
+
+```dockerfile
+# Dockerfile example
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 5000
+CMD ["python", "api.py"]
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the code style
+4. Add tests for new functionality
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Anime data sourced from various public APIs
+- UI components inspired by modern design systems
+- AI recommendations powered by advanced language models
+
+## 📞 Support
+
+For support and questions:
+- Open an issue on GitHub
+- Check the [documentation](docs/)
+- Review existing discussions and solutions
 
 ---
 
-（後續：若要更乾淨「來源檔 + 鎖檔」模型，可把現在的 `requirements.txt` 改名成 `requirements.in`，再用 `uv pip compile` 產生新的鎖定 `requirements.txt`，此部分暫不展開。）
-
-## Git 協作與分支命名
-
-主線：main（保持可部署 / 穩定）
-
-每一項功能或修復都開「短生命週期」分支，完成後透過 Pull Request 合併回 main。
-
-
-### 流程（含本地直接合併模式）
-#### 用 VS Code 終端切換 shell 為 Git Bash（有內建補全git指令功能）
-1. 取得專案（第一次）
-```bash
-git clone <repo-url>
-cd Anime_agent
-git checkout -b <branch-name>   # 建分支
-```
-
-2. 每天開始作業先同步 main
-```bash
-git checkout main
-git pull origin main
-git checkout <branch-name> 
-git rebase main     # 或：git merge main
-```
-
-3. 開發 & 提交
-```bash
-git add .
-git commit -m "feat: 初始化匯入 CSV 功能"
-```
-
-4. 修改完推送遠端
-```bash
-git fetch origin
-git checkout <branch-name> 
-git rebase origin/main     # 解衝突 -> git add -> git rebase --continue
-git push -u origin <branch-name> 
-```
-(不熟 rebase 可改用：git merge origin/main -> git push)
-
-
-5. 合併回 main （無 PR 模式二選一）
-
-	A) 建 merge commit（保留分支歷史）
-	```bash
-	git checkout main
-	git pull origin main
-	git merge --no-ff <branch-name>
-	git push origin main
-	```
-	B) 線性歷史（rebase + fast-forward）
-	```bash
-	git checkout <branch-name>
-	git fetch origin
-	git rebase origin/main   # 解衝突後 git add / git rebase --continue
-	git checkout main
-	git pull origin main
-	git merge --ff-only <branch-name>
-	git push origin main
-	```
-	備註：若 A 已產生 merge commit，不要再 rebase 試圖重寫；若 B rebase 過程衝突太多可退回：`git rebase --abort` 改用 A。
-
-6. 本地清理
-```bash
-git checkout main
-git pull origin main
-git branch -d feature/import-data   # 或 git branch -d <branch-name>
-git fetch -p
-```
-
-### 快速對照
-| 動作 | 指令 |
-| ---- | ---- |
-| 建新功能分支 | git checkout -b feature/<簡述> |
-| 同步 main | git pull origin main |
-| 更新功能分支 | git rebase main (或 git merge main) |
-| 推送 | git push / 首次加 -u |
-| 修衝突後續 | git add; git rebase --continue |
-| 刪除本地分支 | git branch -d <branch> |
-| 刪除遠端分支 | git push origin --delete <branch> |
-| 本地合併（merge commit） | git merge --no-ff <branch> |
-| 本地合併（線性） | git rebase main -> git merge --ff-only <branch> |
-
-> 原則：不在 main 直接開發；小步提交；一功能一分支；PR 合併前保持可重播（rebase 或 merge）
+**Development Principles**: 
+- No direct development on main branch
+- Small, focused commits
+- One feature per branch
+- Maintain replayable history (rebase or merge before PR)

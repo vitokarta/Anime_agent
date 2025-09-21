@@ -50,8 +50,8 @@ def basic_tag_search(tags: List[str] | None = None, season: str | None = None):
     # 基本查詢 (需用關鍵字參數 season=season，避免被當成 limit )
     results = db.query_anime_by_tags(tags or [], season=season)
 
-    # for anime in results:
-    #     print(anime)
+    for anime in results:
+        print(anime)
     
     return results
 
