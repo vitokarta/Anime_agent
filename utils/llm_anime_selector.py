@@ -7,9 +7,9 @@ LLM 動漫選擇器
 
 import os
 import json
-import requests
 from typing import List, Dict, Any
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # 載入環境變數
 load_dotenv()
@@ -17,12 +17,13 @@ load_dotenv()
 class LLMAnimeSelector:
     def __init__(self):
         # 從環境變數獲取設定
-        self.base_url = os.getenv("LEMONADE_BASE_URL", "http://192.168.1.10:8000/api/v1")
-        self.api_key = os.getenv("LEMONADE_API_KEY", "lemonade")
-        self.model = os.getenv("DEFAULT_MODEL", "Qwen3-14B-GGUF")
-        
-        # LLM API 端點
-        self.chat_url = f"{self.base_url}/chat/completions"
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not self.openai_api_key:
+            raise ValueError("請在 .env 文件中設定 OPENAI_API_KEY")
+            
+        # 初始化 OpenAI 客戶端
+        self.openai_client = OpenAI(api_key=self.openai_api_key)
+        self.model = "gpt-4o"  # 使用 GPT-4
         
     def format_anime_for_llm(self, anime_list: List[Dict]) -> str:
         """將動漫資料格式化為 LLM 可讀的文字"""
@@ -53,7 +54,7 @@ class LLMAnimeSelector:
         return formatted_text
     
     def call_llm(self, user_description: str, anime_list: List[Dict], count: int) -> tuple[List[int], List[str]]:
-        """呼叫本地 LLM 選擇最符合的動漫並生成推薦理由"""
+        """呼叫 OpenAI API 選擇最符合的動漫並生成推薦理由"""
         
         # 格式化動漫資料
         anime_text = self.format_anime_for_llm(anime_list)
@@ -83,51 +84,34 @@ class LLMAnimeSelector:
 """
 
         try:
-            # 準備請求資料
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
-            }
+            print(f"呼叫 OpenAI API")
+            print(f"使用模型: {self.model}")
+            print(f"提示詞預覽: {prompt[:200]}...")
             
-            data = {
-                "model": self.model,
-                "messages": [
+            # 發送請求到 OpenAI
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=[
                     {
                         "role": "user", 
                         "content": prompt
                     }
                 ],
-                "temperature": 0.3,
-                "max_tokens": 300
-            }
-            
-            print(f"呼叫本地 LLM: {self.chat_url}")
-            print(f"使用模型: {self.model}")
-            
-            # 發送請求
-            response = requests.post(
-                self.chat_url, 
-                headers=headers, 
-                json=data, 
-                timeout=30
+                temperature=0.3,
+                max_tokens=300,
+                timeout=60
             )
             
-            if response.status_code == 200:
-                result = response.json()
-                llm_response = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-                
-                print(f"LLM 回應：{llm_response}")
-                
-                # 解析 LLM 回應
-                selected_indices, reasons = self.parse_llm_response_with_reasons(llm_response, len(anime_list))
-                return selected_indices, reasons
-                
-            else:
-                print(f"LLM API 請求失敗: {response.status_code}, {response.text}")
-                return self.fallback_selection(anime_list, count), []
+            llm_response = response.choices[0].message.content.strip()
+            print(f"OpenAI 完整回應：{llm_response}")
+            
+            # 解析 OpenAI 回應
+            selected_indices, reasons = self.parse_llm_response_with_reasons(llm_response, len(anime_list))
+            print(f"解析結果 - 索引: {selected_indices}, 理由: {reasons}")
+            return selected_indices, reasons
                 
         except Exception as e:
-            print(f"呼叫 LLM 時發生錯誤: {str(e)}")
+            print(f"呼叫 OpenAI API 時發生錯誤: {str(e)}")
             return self.fallback_selection(anime_list, count), []
     
     def parse_llm_response_with_reasons(self, response: str, max_index: int) -> tuple[List[int], List[str]]:
@@ -136,24 +120,41 @@ class LLMAnimeSelector:
             indices = []
             reasons = []
             
-            for line in response.strip().split('\n'):
+            print(f"開始解析 LLM 回應，最大索引: {max_index}")
+            lines = response.strip().split('\n')
+            print(f"分割後的行數: {len(lines)}")
+            
+            for i, line in enumerate(lines):
                 line = line.strip()
+                print(f"處理第 {i+1} 行: '{line}'")
+                
                 if ':' in line:
                     parts = line.split(':', 1)
                     if len(parts) == 2:
                         try:
-                            num = int(parts[0].strip())
+                            num_str = parts[0].strip()
                             reason = parts[1].strip()
+                            print(f"  嘗試解析編號: '{num_str}', 理由: '{reason}'")
+                            
+                            num = int(num_str)
                             if 1 <= num <= max_index:
                                 indices.append(num - 1)  # 轉換為 0-based 索引
                                 reasons.append(reason)
-                        except ValueError:
+                                print(f"  成功添加: 索引 {num-1}, 理由: {reason}")
+                            else:
+                                print(f"  編號 {num} 超出範圍 [1, {max_index}]")
+                        except ValueError as e:
+                            print(f"  無法解析編號 '{num_str}': {e}")
                             continue
+                else:
+                    print(f"  行中沒有冒號，跳過")
             
             # 如果解析失敗，至少返回第一個
             if not indices:
+                print("解析失敗，使用預設值")
                 return [0], ["為您精心挑選的優質作品"]
                 
+            print(f"最終解析結果: 索引 {indices}, 理由數量 {len(reasons)}")
             return indices, reasons
             
         except Exception as e:

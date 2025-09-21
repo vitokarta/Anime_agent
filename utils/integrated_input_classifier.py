@@ -12,6 +12,8 @@ import sys
 import sqlite3
 import json
 import time
+import requests
+import urllib.parse
 from datetime import datetime
 from openai import OpenAI
 
@@ -67,6 +69,39 @@ def get_anime_genres(db_path, anime_name):
         return json.loads(results[0][1]), results[0][0]
     return None, None
 
+def call_external_api_for_recommendation(user_input, count=3):
+    """調用外部 API 獲取推薦"""
+    try:
+        # 調試輸出
+        print(f"原始用戶輸入: {user_input}")
+        print(f"請求數量: {count}")
+        
+        # 構建 API URL
+        base_url = "http://192.168.1.96:5678/webhook/perplexity"
+        params = {
+            "question": f"{user_input}",
+            "n": count
+        }
+        
+        # 編碼參數
+        url = f"{base_url}?{urllib.parse.urlencode(params)}"
+        print(f"調用外部 API: {url}")
+        print(f"question 參數內容: {params['question']}")
+        
+        # 發送請求
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+        
+        # 解析回應
+        data = response.json()
+        print(f"外部 API 回應: {data}")
+        
+        return data
+        
+    except Exception as e:
+        print(f"調用外部 API 失敗: {str(e)}")
+        return None
+
 def use_openai_for_genre_classification(user_input, genres_list, max_retries=3):
     """使用 OpenAI API 進行類別分類"""
     try:
@@ -78,6 +113,7 @@ def use_openai_for_genre_classification(user_input, genres_list, max_retries=3):
             f"1. 必須從上述列表中選擇\n"
             f"2. 選擇0至2個最相關的類別\n"
             f"3. 嚴格按照以下格式回覆，每行一個結果：\n"
+            f"4. 若為個人化推薦，則不需進行選擇\n"
             f"範例輸出：\n"
             f"奇幻\n"
             f"冒險\n"
@@ -124,7 +160,7 @@ def use_openai_for_genre_classification(user_input, genres_list, max_retries=3):
         print(f"OpenAI 分類失敗：{str(e)}")
         return []
 
-def classify_input_request(user_input, season, max_retries=3):
+def classify_input_request(user_input, season, count, max_retries=3):
     """
     分類用戶輸入請求
     返回格式：
@@ -138,7 +174,7 @@ def classify_input_request(user_input, season, max_retries=3):
             f"輸入文本：{user_input}\n\n"
             f"判斷規則：\n"
             f"1: 提到特定動漫名稱的推薦請求（例如：有沒有和火影忍者相似的動漫）\n"
-            f"2: 提到動漫類別、特徵、題材的推薦請求 （例如：有沒有推薦的XX類型番劇）\n"
+            f"2: 提到動漫類別、特徵、題材的推薦請求 （例如：有沒有推薦的XX類型番劇 、請給我做個人化推薦）\n"
             f"3: 其他或無法判斷的請求\n\n"
             f"請只返回一個數字(1,2,3)，不要有任何其他文字"
         )
@@ -233,7 +269,8 @@ def classify_input_request(user_input, season, max_retries=3):
             return [2, result]
         else:
             # 類型3：其他
-            return [3, user_input]
+            result = call_external_api_for_recommendation(user_input, count=count)
+            return [3, result]
 
     except Exception as e:
         print(f"分類過程發生錯誤：{str(e)}")

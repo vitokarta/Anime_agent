@@ -453,6 +453,144 @@ class AnimeDatabase:
         
         return filtered_results
 
+    def add_like_column_if_not_exists(self):
+        """
+        檢查並添加 like 欄位到 anime 表格
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # 檢查是否已經有 like 欄位
+            cursor.execute("PRAGMA table_info(anime)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'like' not in columns:
+                # 添加 like 欄位，預設值為 False (0)
+                cursor.execute("ALTER TABLE anime ADD COLUMN `like` BOOLEAN DEFAULT 0")
+                conn.commit()
+                print("✅ Successfully added 'like' column to anime table")
+            else:
+                print("ℹ️ 'like' column already exists in anime table")
+                
+        except sqlite3.Error as e:
+            print(f"❌ Error adding like column: {e}")
+        finally:
+            if conn:
+                conn.close()
+    
+    def update_anime_like_status(self, anime_id: int, liked: bool) -> bool:
+        """
+        更新動漫的喜愛狀態
+        
+        Args:
+            anime_id: 動漫ID
+            liked: True表示喜歡，False表示不喜歡
+            
+        Returns:
+            bool: 操作是否成功
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # 檢查動漫是否存在
+            cursor.execute("SELECT id FROM anime WHERE id = ?", (anime_id,))
+            if not cursor.fetchone():
+                print(f"❌ Anime with ID {anime_id} not found")
+                return False
+            
+            # 更新喜愛狀態
+            cursor.execute("UPDATE anime SET `like` = ? WHERE id = ?", 
+                          (1 if liked else 0, anime_id))
+            conn.commit()
+            
+            status = "liked" if liked else "unliked"
+            print(f"✅ Successfully {status} anime ID {anime_id}")
+            return True
+            
+        except sqlite3.Error as e:
+            print(f"❌ Error updating like status: {e}")
+            return False
+        finally:
+            if conn:
+                conn.close()
+    
+    def get_liked_anime(self, limit: int = 20) -> List[Dict]:
+        """
+        獲取用戶喜愛的動漫列表
+        
+        Args:
+            limit: 最大返回數量
+            
+        Returns:
+            List[Dict]: 喜愛的動漫列表
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT id, title, genres, rating, viewers, season, year, status, image_url
+            FROM anime 
+            WHERE `like` = 1 
+            ORDER BY rating DESC, viewers DESC
+            LIMIT ?
+            """
+            
+            cursor.execute(query, (limit,))
+            columns = [description[0] for description in cursor.description]
+            results = []
+            
+            for row in cursor.fetchall():
+                anime_dict = dict(zip(columns, row))
+                # 解析genres JSON
+                if anime_dict.get('genres'):
+                    try:
+                        anime_dict['genres'] = json.loads(anime_dict['genres'])
+                    except json.JSONDecodeError:
+                        anime_dict['genres'] = []
+                results.append(anime_dict)
+            
+            print(f"✅ Found {len(results)} liked anime")
+            return results
+            
+        except sqlite3.Error as e:
+            print(f"❌ Error getting liked anime: {e}")
+            return []
+        finally:
+            if conn:
+                conn.close()
+    
+    def get_anime_like_status(self, anime_id: int) -> Optional[bool]:
+        """
+        獲取動漫的喜愛狀態
+        
+        Args:
+            anime_id: 動漫ID
+            
+        Returns:
+            Optional[bool]: True表示喜歡，False表示不喜歡，None表示動漫不存在
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT `like` FROM anime WHERE id = ?", (anime_id,))
+            result = cursor.fetchone()
+            
+            if result is None:
+                return None
+            
+            return bool(result[0])
+            
+        except sqlite3.Error as e:
+            print(f"❌ Error getting like status: {e}")
+            return None
+        finally:
+            if conn:
+                conn.close()
+
 # 便利函數
 def create_anime_db(db_path: str = "anime_database.db") -> AnimeDatabase:
     """創建AnimeDatabase實例的便利函數"""

@@ -92,10 +92,9 @@ SELECT * FROM anime LIMIT 5;   -- 查詢前五筆
 
 索引 / 主鍵：`PRIMARY KEY (user_id, anime_id)`，並有 `idx_user_fav_user_time` (user_id, favorited_at DESC)。
 
-### 新增收藏（忽略已存在）
+### 設定like dislike
 ```sql
-INSERT OR IGNORE INTO user_favorites (user_id, anime_id)
-VALUES ('u01', 5);
+UPDATE anime SET like = 0, is_disliked = 0 WHERE id = 26;
 ```
 
 ### 取消收藏
