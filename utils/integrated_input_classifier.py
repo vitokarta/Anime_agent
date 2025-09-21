@@ -69,6 +69,53 @@ def get_anime_genres(db_path, anime_name):
         return json.loads(results[0][1]), results[0][0]
     return None, None
 
+def get_second_most_common_genre_from_likes(db_path):
+    """從資料庫中提取所有 like=1 的動漫標籤，返回數量第二多的標籤"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    try:
+        # 查詢所有 like=1 的動漫的 genres_json
+        cursor.execute("SELECT genres_json FROM anime WHERE `like` = 1")
+        
+        # 統計每個標籤出現的次數
+        genre_count = {}
+        for row in cursor.fetchall():
+            try:
+                genres = json.loads(row[0])
+                for genre in genres:
+                    genre_count[genre] = genre_count.get(genre, 0) + 1
+            except:
+                continue
+        
+        # 如果沒有找到任何標籤，返回空列表
+        if not genre_count:
+            print("未找到任何喜愛的動漫標籤")
+            return []
+        
+        # 按出現次數排序
+        sorted_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)
+        
+        # 調試輸出
+        print(f"喜愛動漫的標籤統計:")
+        for genre, count in sorted_genres[:5]:  # 顯示前5個
+            print(f"  {genre}: {count}次")
+        
+        # 返回前兩個最多的標籤
+        if len(sorted_genres) >= 2:
+            top_two = [sorted_genres[0][0], sorted_genres[1][0]]
+            print(f"選擇數量前2多的標籤: {top_two}")
+            return top_two
+        # 如果只有一個標籤，返回它
+        elif len(sorted_genres) == 1:
+            print(f"只有一個標籤，返回: {sorted_genres[0][0]}")
+            return [sorted_genres[0][0]]
+        else:
+            return []
+            
+    finally:
+        conn.close()
+
 def call_external_api_for_recommendation(user_input, count=3):
     """調用外部 API 獲取推薦"""
     try:
@@ -160,7 +207,7 @@ def use_openai_for_genre_classification(user_input, genres_list, max_retries=3):
         print(f"OpenAI 分類失敗：{str(e)}")
         return []
 
-def classify_input_request(user_input, season, count, max_retries=3):
+def classify_input_request(user_input, season, count, max_retries=3, use_favorites=False):
     """
     分類用戶輸入請求
     返回格式：
@@ -178,7 +225,7 @@ def classify_input_request(user_input, season, count, max_retries=3):
             f"3: 其他或無法判斷的請求\n\n"
             f"請只返回一個數字(1,2,3)，不要有任何其他文字"
         )
-
+        
         # 使用 OpenAI API 進行分類，添加重試機制
         request_type = 3  # 默認為類型3
         for attempt in range(max_retries):
@@ -263,7 +310,13 @@ def classify_input_request(user_input, season, count, max_retries=3):
             print(f"找到 {len(genres_list)} 個可用類別")
 
             # 使用 OpenAI 進行類別分類
-            recommended_genres = use_openai_for_genre_classification(user_input, genres_list)
+            if use_favorites:
+                # 從資料庫中提取所有 like=1 的動漫標籤
+                recommended_genres = get_second_most_common_genre_from_likes(db_path)
+            else:
+                recommended_genres = use_openai_for_genre_classification(user_input, genres_list)
+            
+            print(f"推薦的類別：{recommended_genres}")
             result = basic_tag_search(recommended_genres, season=season)
 
             return [2, result]

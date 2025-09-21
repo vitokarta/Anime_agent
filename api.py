@@ -327,16 +327,16 @@ def get_anime_recommendations():
         use_favorites = data.get('useFavorites', False)
         favorites = data.get('favorites', [])
 
-        classification_result = classify_input_request(description, season=season, count=count)
+        classification_result = classify_input_request(description, season=season, count=count, use_favorites=use_favorites)
         #print(f"Classification result: {classification_result}")
 
-        if classification_result[0] == 1 :
+        if classification_result[0] == 1 and not use_favorites:
             # 類型1：動漫名稱推薦
             print(f"Classified as Type 1 (Anime Name)")
             candidate_anime = classification_result[1]  # 已經是查詢出來的前10部動漫
             llm_selector = create_llm_selector()
             selected_anime, llm_reasons = llm_selector.select_anime(description, candidate_anime, count)
-        elif classification_result[0] == 2:
+        elif classification_result[0] == 2 or use_favorites:
             # 類型2：標籤推薦
             print(f"Classified as Type 2 (Tags)")
             candidate_anime = classification_result[1]  # 已經是查詢出來的前10部動漫
