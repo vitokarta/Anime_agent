@@ -17,6 +17,10 @@ import urllib.parse
 from datetime import datetime
 from openai import OpenAI
 
+# 導入本地 lemonade server
+#sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from models.client import lemonade
+
 # 添加專案根目錄到 Python 路徑
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.sample_queries_basic import recommend_similar_anime, basic_tag_search
@@ -225,33 +229,32 @@ def classify_input_request(user_input, season, count, max_retries=3, use_favorit
             f"3: 其他或無法判斷的請求\n\n"
             f"請只返回一個數字(1,2,3)，不要有任何其他文字"
         )
-        
-        # 使用 OpenAI API 進行分類，添加重試機制
+
+        # 使用 lemonade server 進行分類，添加重試機制
         request_type = 3  # 默認為類型3
         for attempt in range(max_retries):
             try:
                 print(f"嘗試進行請求類型判斷... (第 {attempt + 1} 次)")
-                response = openai_client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.1,
-                    max_tokens=10,
-                    timeout=60
-                )
+                start_time = time.time()
+                
+                # 使用 lemonade server 進行分類
+                response = lemonade.simple_chat(prompt)
+                end_time = time.time()
+                print(f"lemonade server 耗時: {end_time - start_time} 秒")
 
-                result = response.choices[0].message.content.strip()
+                result = response.strip()
                 request_type = int(result)
                 if request_type not in [1, 2, 3]:
-                    print(f"OpenAI 返回了無效的類型：{result}")
+                    print(f"lemonade server 返回了無效的類型：{result}")
                     request_type = 3
                 print(f"分類結果：類型 {request_type}")
                 break  # 成功獲得回應，跳出重試循環
             except Exception as e:
                 if attempt < max_retries - 1:
-                    print(f"OpenAI 請求失敗，等待1秒後重試... ({attempt + 1}/{max_retries}): {str(e)}")
+                    print(f"lemonade server 請求失敗，等待1秒後重試... ({attempt + 1}/{max_retries}): {str(e)}")
                     time.sleep(1)
                     continue
-                print(f"OpenAI 請求失敗：{str(e)}")
+                print(f"lemonade server 請求失敗：{str(e)}")
                 request_type = 3
                 break
 
