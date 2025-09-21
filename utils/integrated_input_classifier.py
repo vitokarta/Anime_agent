@@ -229,7 +229,7 @@ def classify_input_request(user_input, season, count, max_retries=3, use_favorit
             f"3: 其他或無法判斷的請求\n\n"
             f"請只返回一個數字(1,2,3)，不要有任何其他文字"
         )
-
+        
         # 使用 lemonade server 進行分類，添加重試機制
         request_type = 3  # 默認為類型3
         for attempt in range(max_retries):
@@ -260,7 +260,8 @@ def classify_input_request(user_input, season, count, max_retries=3, use_favorit
 
         # 資料庫路徑
         db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'anime_database.db')
-
+        if user_input == "請給我做個人化推薦":
+            request_type = 2
         # 根據類型進行處理
         if request_type == 1:
             # 類型1：提取動漫名稱

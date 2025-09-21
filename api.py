@@ -316,103 +316,103 @@ def get_favorite_anime():
 
 @app.route('/api/anime/recommend', methods=['POST'])
 def get_anime_recommendations():
-    try:
-        print("\n=== New Recommendation Request ===")
-        data = request.get_json()
-        print(f"Raw request data: {data}")
+    # try:
+    print("\n=== New Recommendation Request ===")
+    data = request.get_json()
+    print(f"Raw request data: {data}")
+    
+    count = data.get('count', 5)
+    season = data.get('season', '')
+    description = data.get('description', '')
+    use_favorites = data.get('useFavorites', False)
+    favorites = data.get('favorites', [])
+
+    classification_result = classify_input_request(description, season=season, count=count, use_favorites=use_favorites)
+    #print(f"Classification result: {classification_result}")
+
+    if classification_result[0] == 1 and not use_favorites:
+        # 類型1：動漫名稱推薦
+        print(f"Classified as Type 1 (Anime Name)")
+        candidate_anime = classification_result[1]  # 已經是查詢出來的前10部動漫
+        llm_selector = create_llm_selector()
+        selected_anime, llm_reasons = llm_selector.select_anime(description, candidate_anime, count)
+    elif classification_result[0] == 2 or use_favorites:
+        # 類型2：標籤推薦
+        print(f"Classified as Type 2 (Tags)")
+        candidate_anime = classification_result[1]  # 已經是查詢出來的前10部動漫
+        llm_selector = create_llm_selector()
+        selected_anime, llm_reasons = llm_selector.select_anime(description, candidate_anime, count)
+    elif classification_result[0] == 3:
+        # 類型3：外部 API 推薦
+        print(f"Classified as Type 3 (External API)")
+        external_api_response = classification_result[1]  # 外部 API 的回應
         
-        count = data.get('count', 5)
-        season = data.get('season', '')
-        description = data.get('description', '')
-        use_favorites = data.get('useFavorites', False)
-        favorites = data.get('favorites', [])
-
-        classification_result = classify_input_request(description, season=season, count=count, use_favorites=use_favorites)
-        #print(f"Classification result: {classification_result}")
-
-        if classification_result[0] == 1 and not use_favorites:
-            # 類型1：動漫名稱推薦
-            print(f"Classified as Type 1 (Anime Name)")
-            candidate_anime = classification_result[1]  # 已經是查詢出來的前10部動漫
-            llm_selector = create_llm_selector()
-            selected_anime, llm_reasons = llm_selector.select_anime(description, candidate_anime, count)
-        elif classification_result[0] == 2 or use_favorites:
-            # 類型2：標籤推薦
-            print(f"Classified as Type 2 (Tags)")
-            candidate_anime = classification_result[1]  # 已經是查詢出來的前10部動漫
-            llm_selector = create_llm_selector()
-            selected_anime, llm_reasons = llm_selector.select_anime(description, candidate_anime, count)
-        elif classification_result[0] == 3:
-            # 類型3：外部 API 推薦
-            print(f"Classified as Type 3 (External API)")
-            external_api_response = classification_result[1]  # 外部 API 的回應
-            
-            # 檢查外部 API 是否成功返回結果
-            if external_api_response is None:
-                print("外部 API 連接失敗，返回錯誤信息")
-                return jsonify({
-                    "error": "外部推薦服務暫時無法使用，請稍後再試或嘗試其他描述方式",
-                    "suggestions": [
-                        "嘗試描述具體的動漫名稱",
-                        "描述喜歡的動漫類型或風格",
-                        "檢查網路連接後重新嘗試"
-                    ]
-                }), 503
-            else:
-                result = process_external_api_response(external_api_response, count)
-                print(f"即將返回 {len(result)} 部推薦動漫給前端")
-                return jsonify(result)
+        # 檢查外部 API 是否成功返回結果
+        if external_api_response is None:
+            print("外部 API 連接失敗，返回錯誤信息")
+            return jsonify({
+                "error": "外部推薦服務暫時無法使用，請稍後再試或嘗試其他描述方式",
+                "suggestions": [
+                    "嘗試描述具體的動漫名稱",
+                    "描述喜歡的動漫類型或風格",
+                    "檢查網路連接後重新嘗試"
+                ]
+            }), 503
         else:
-            print("Classified as unknown type")
-            return jsonify({"error": "暫不支援此類型的推薦"}), 400
+            result = process_external_api_response(external_api_response, count)
+            print(f"即將返回 {len(result)} 部推薦動漫給前端")
+            return jsonify(result)
+    else:
+        print("Classified as unknown type")
+        return jsonify({"error": "暫不支援此類型的推薦"}), 400
+    
+    print(f"Selected anime count: {len(selected_anime)}")
+    print(f"LLM reasons count: {len(llm_reasons)}")
+
+    #整理回傳內容
+    result = []
+    for i, anime_dict in enumerate(selected_anime):
+        # 處理 genres_json（可能是 JSON 字串或逗號分隔的字串）
+        try:
+            import json
+            genres = json.loads(anime_dict.get('genres_json', '[]'))
+        except:
+            genres = anime_dict.get('genres_json', '').split(',') if anime_dict.get('genres_json') else []
         
-        print(f"Selected anime count: {len(selected_anime)}")
-        print(f"LLM reasons count: {len(llm_reasons)}")
+        # 處理 platforms_json
+        try:
+            platforms = json.loads(anime_dict.get('platforms_json', '[]'))
+        except:
+            platforms = ['Crunchyroll', 'Netflix']  # 默認平台
+        
+        # 構建圖片URL
+        image_path = anime_dict.get('image_path', '')
+        # 從完整路徑中提取文件名
+        image_filename = os.path.basename(image_path) if image_path else ''
+        image_url = f'http://localhost:5000/images/{image_filename}' if image_filename else '預設圖片URL'
+        print(f"Generated image URL: {image_url}")  # 診斷日誌
 
-        #整理回傳內容
-        result = []
-        for i, anime_dict in enumerate(selected_anime):
-            # 處理 genres_json（可能是 JSON 字串或逗號分隔的字串）
-            try:
-                import json
-                genres = json.loads(anime_dict.get('genres_json', '[]'))
-            except:
-                genres = anime_dict.get('genres_json', '').split(',') if anime_dict.get('genres_json') else []
-            
-            # 處理 platforms_json
-            try:
-                platforms = json.loads(anime_dict.get('platforms_json', '[]'))
-            except:
-                platforms = ['Crunchyroll', 'Netflix']  # 默認平台
-            
-            # 構建圖片URL
-            image_path = anime_dict.get('image_path', '')
-            # 從完整路徑中提取文件名
-            image_filename = os.path.basename(image_path) if image_path else ''
-            image_url = f'http://localhost:5000/images/{image_filename}' if image_filename else '預設圖片URL'
-            print(f"Generated image URL: {image_url}")  # 診斷日誌
+        # 使用 LLM 生成的理由，如果沒有則使用默認理由
+        if i < len(llm_reasons) and llm_reasons[i]:
+            reason = llm_reasons[i]
+            print(f"使用 LLM 理由 [{i}]: {reason}")
+        else:
+            reason = "基於你的偏好推薦"
+            print(f"使用預設理由 [{i}]: {reason}")
 
-            # 使用 LLM 生成的理由，如果沒有則使用默認理由
-            if i < len(llm_reasons) and llm_reasons[i]:
-                reason = llm_reasons[i]
-                print(f"使用 LLM 理由 [{i}]: {reason}")
-            else:
-                reason = "基於你的偏好推薦"
-                print(f"使用預設理由 [{i}]: {reason}")
-
-            # 整理回傳內容
-            result.append({
-                'id': anime_dict.get('id'),
-                'title': anime_dict.get('title', '未知標題'),
-                'cover': image_url,
-                'season': anime_dict.get('season', '2024-1月'),
-                'rating': float(anime_dict.get('rating', 0)) if anime_dict.get('rating') else 0.0,
-                'viewers': parse_viewers_count(anime_dict.get('viewers_count')),
-                'genres': genres,
-                'description': anime_dict.get('synopsis', '暫無描述'),
-                'platforms': platforms,
-                'reason': reason
-            })
+        # 整理回傳內容
+        result.append({
+            'id': anime_dict.get('id'),
+            'title': anime_dict.get('title', '未知標題'),
+            'cover': image_url,
+            'season': anime_dict.get('season', '2024-1月'),
+            'rating': float(anime_dict.get('rating', 0)) if anime_dict.get('rating') else 0.0,
+            'viewers': parse_viewers_count(anime_dict.get('viewers_count')),
+            'genres': genres,
+            'description': anime_dict.get('synopsis', '暫無描述'),
+            'platforms': platforms,
+            'reason': reason
+        })
         return jsonify(result)
         #sample return
         # result.append({
@@ -429,9 +429,9 @@ def get_anime_recommendations():
         #     })
         # return jsonify(result)
 
-    except Exception as e:
-        print(f"Error getting anime recommendations: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    # except Exception as e:
+    #     print(f"Error getting anime recommendations: {str(e)}")
+    #     return jsonify({"error": str(e)}), 500
 
     
 if __name__ == '__main__':
